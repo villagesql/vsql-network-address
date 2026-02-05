@@ -1,0 +1,7 @@
+{
+  "name": "vsql_network_address",
+  "version": "0.0.1",
+  "description": "Network address types (INET, CIDR, MACADDR, MACADDR8) for VillageSQL",
+  "author": "VillageSQL Community",
+  "license": "GPL-2.0"
+}

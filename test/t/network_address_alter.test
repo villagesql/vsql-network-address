@@ -1,0 +1,257 @@
+# Setup: Copy VEB to veb_dir if VSQL_NETWORK_ADDRESS_VEB is set, then install extension
+--let $veb_dest = `SELECT CONCAT(@@veb_dir, '/vsql_network_address.veb')`
+if ($VSQL_NETWORK_ADDRESS_VEB) {
+  --error 0,1
+  --remove_file $veb_dest
+  --copy_file $VSQL_NETWORK_ADDRESS_VEB $veb_dest
+}
+
+INSTALL EXTENSION vsql_network_address;
+
+########################################################################
+#
+# Test 1: ALTER TABLE ... ADD COLUMN with network address types
+#
+########################################################################
+
+CREATE TABLE test_alter_add (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL
+);
+
+# Add CIDR column
+ALTER TABLE test_alter_add ADD COLUMN network CIDR;
+SHOW FULL COLUMNS FROM test_alter_add;
+
+# Add INET column
+ALTER TABLE test_alter_add ADD COLUMN address INET;
+SHOW FULL COLUMNS FROM test_alter_add;
+
+# Add MACADDR column
+ALTER TABLE test_alter_add ADD COLUMN mac MACADDR;
+SHOW FULL COLUMNS FROM test_alter_add;
+
+# Add MACADDR8 column
+ALTER TABLE test_alter_add ADD COLUMN mac8 MACADDR8;
+SHOW FULL COLUMNS FROM test_alter_add;
+
+# Verify the table works with data (IPv4 and IPv6)
+INSERT INTO test_alter_add (name, network, address, mac, mac8)
+VALUES (
+    'server-01',
+    vsql_network_address.cidr_from_string('192.168.1.0/24'),
+    vsql_network_address.inet_from_string('192.168.1.5'),
+    vsql_network_address.macaddr_from_string('08:00:2b:01:02:03'),
+    vsql_network_address.macaddr8_from_string('08:00:2b:01:02:03:04:05')
+),
+(
+    'server-02-ipv6',
+    vsql_network_address.cidr_from_string('2001:db8::/32'),
+    vsql_network_address.inet_from_string('2001:db8::1/64'),
+    vsql_network_address.macaddr_from_string('aa:bb:cc:dd:ee:ff'),
+    vsql_network_address.macaddr8_from_string('aa:bb:cc:dd:ee:ff:11:22')
+);
+
+SELECT id, name, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address),
+       vsql_network_address.macaddr_to_string(mac), vsql_network_address.macaddr8_to_string(mac8)
+FROM test_alter_add;
+
+########################################################################
+#
+# Test 2: ALTER TABLE ... DROP COLUMN with network address types
+#
+########################################################################
+
+CREATE TABLE test_alter_drop (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100),
+    network CIDR,
+    address INET,
+    mac MACADDR,
+    mac8 MACADDR8
+);
+
+# Insert test data (IPv4 and IPv6)
+INSERT INTO test_alter_drop (name, network, address, mac, mac8)
+VALUES (
+    'test-data',
+    vsql_network_address.cidr_from_string('10.0.0.0/8'),
+    vsql_network_address.inet_from_string('10.0.0.1'),
+    vsql_network_address.macaddr_from_string('aa:bb:cc:dd:ee:ff'),
+    vsql_network_address.macaddr8_from_string('aa:bb:cc:dd:ee:ff:00:11')
+),
+(
+    'test-data-ipv6',
+    vsql_network_address.cidr_from_string('fe80::/64'),
+    vsql_network_address.inet_from_string('fe80::1'),
+    vsql_network_address.macaddr_from_string('11:22:33:44:55:66'),
+    vsql_network_address.macaddr8_from_string('11:22:33:44:55:66:77:88')
+);
+
+# Drop MACADDR8 column
+ALTER TABLE test_alter_drop DROP COLUMN mac8;
+SHOW FULL COLUMNS FROM test_alter_drop;
+
+# Verify data still exists
+SELECT id, name, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address),
+       vsql_network_address.macaddr_to_string(mac)
+FROM test_alter_drop;
+
+# Drop MACADDR column
+ALTER TABLE test_alter_drop DROP COLUMN mac;
+SHOW FULL COLUMNS FROM test_alter_drop;
+
+# Drop INET column
+ALTER TABLE test_alter_drop DROP COLUMN address;
+SHOW FULL COLUMNS FROM test_alter_drop;
+
+# Drop CIDR column
+ALTER TABLE test_alter_drop DROP COLUMN network;
+SHOW FULL COLUMNS FROM test_alter_drop;
+
+########################################################################
+#
+# Test 3: ALTER TABLE ... MODIFY COLUMN with network address types
+#
+########################################################################
+
+CREATE TABLE test_alter_modify (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    network CIDR,
+    address INET
+);
+
+# Insert test data (IPv4 and IPv6)
+INSERT INTO test_alter_modify (network, address)
+VALUES (
+    vsql_network_address.cidr_from_string('192.168.1.0/24'),
+    vsql_network_address.inet_from_string('192.168.1.5')
+),
+(
+    vsql_network_address.cidr_from_string('2001:db8::/48'),
+    vsql_network_address.inet_from_string('2001:db8::100/64')
+);
+
+# Modify CIDR column to add NOT NULL constraint
+ALTER TABLE test_alter_modify MODIFY COLUMN network CIDR NOT NULL;
+SHOW FULL COLUMNS FROM test_alter_modify;
+
+# Verify data still works
+SELECT id, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address)
+FROM test_alter_modify;
+
+# Try to insert NULL - should fail
+--error ER_BAD_NULL_ERROR
+INSERT INTO test_alter_modify (network, address)
+VALUES (NULL, vsql_network_address.inet_from_string('10.0.0.1'));
+
+########################################################################
+#
+# Test 4: ALTER TABLE ... CHANGE COLUMN to rename network address columns
+#
+########################################################################
+
+CREATE TABLE test_alter_change (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    old_network CIDR,
+    old_address INET,
+    old_mac MACADDR
+);
+
+# Insert test data
+INSERT INTO test_alter_change (old_network, old_address, old_mac)
+VALUES (
+    vsql_network_address.cidr_from_string('172.16.0.0/16'),
+    vsql_network_address.inet_from_string('172.16.1.10'),
+    vsql_network_address.macaddr_from_string('11:22:33:44:55:66')
+);
+
+# Rename CIDR column
+ALTER TABLE test_alter_change CHANGE COLUMN old_network new_network CIDR;
+SHOW FULL COLUMNS FROM test_alter_change;
+
+# Rename INET column with NOT NULL
+ALTER TABLE test_alter_change CHANGE COLUMN old_address new_address INET NOT NULL;
+SHOW FULL COLUMNS FROM test_alter_change;
+
+# Rename MACADDR column
+ALTER TABLE test_alter_change CHANGE COLUMN old_mac new_mac MACADDR;
+SHOW FULL COLUMNS FROM test_alter_change;
+
+# Verify data with new column names
+SELECT id, vsql_network_address.cidr_to_string(new_network), vsql_network_address.inet_to_string(new_address),
+       vsql_network_address.macaddr_to_string(new_mac)
+FROM test_alter_change;
+
+########################################################################
+#
+# Test 5: ALTER TABLE with indexes on network address columns
+#
+########################################################################
+
+CREATE TABLE test_alter_indexed (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    network CIDR
+);
+
+# Add index on network address column
+ALTER TABLE test_alter_indexed ADD INDEX idx_network (network);
+SHOW INDEX FROM test_alter_indexed;
+
+# Add unique constraint
+ALTER TABLE test_alter_indexed ADD UNIQUE INDEX idx_unique_network (network);
+SHOW INDEX FROM test_alter_indexed;
+
+# Drop index
+ALTER TABLE test_alter_indexed DROP INDEX idx_network;
+SHOW INDEX FROM test_alter_indexed;
+
+########################################################################
+#
+# Test 6: Complex ALTER TABLE operations - multiple changes
+#
+########################################################################
+
+CREATE TABLE test_alter_mixed (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100)
+);
+
+# Multiple ADD COLUMN operations in one statement
+ALTER TABLE test_alter_mixed
+    ADD COLUMN network CIDR,
+    ADD COLUMN address INET,
+    ADD COLUMN mac MACADDR;
+
+SHOW FULL COLUMNS FROM test_alter_mixed;
+
+# Insert test data
+INSERT INTO test_alter_mixed (name, network, address, mac)
+VALUES (
+    'multi-change',
+    vsql_network_address.cidr_from_string('10.10.0.0/16'),
+    vsql_network_address.inet_from_string('10.10.1.1'),
+    vsql_network_address.macaddr_from_string('aa:bb:cc:11:22:33')
+);
+
+# Multiple modifications in one statement
+ALTER TABLE test_alter_mixed
+    MODIFY COLUMN network CIDR NOT NULL,
+    DROP COLUMN mac,
+    ADD COLUMN mac8 MACADDR8;
+
+SHOW FULL COLUMNS FROM test_alter_mixed;
+
+# Verify data
+SELECT id, name, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address)
+FROM test_alter_mixed;
+
+########################################################################
+# Cleanup
+########################################################################
+
+DROP TABLE test_alter_add, test_alter_drop, test_alter_modify,
+           test_alter_change, test_alter_indexed, test_alter_mixed;
+
+# Remove extension from registry
+UNINSTALL EXTENSION vsql_network_address;

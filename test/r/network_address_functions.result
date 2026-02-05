@@ -1,0 +1,310 @@
+INSTALL EXTENSION vsql_network_address;
+DROP TABLE IF EXISTS test_functions;
+CREATE TABLE test_functions (
+id INT PRIMARY KEY,
+inet_addr INET,
+cidr_addr CIDR,
+mac_addr MACADDR,
+description VARCHAR(100)
+);
+INSERT INTO test_functions (id, inet_addr, cidr_addr, mac_addr, description) VALUES
+(1, vsql_network_address.inet_from_string('192.168.1.5/24'), vsql_network_address.cidr_from_string('192.168.1.0/24'), vsql_network_address.macaddr_from_string('08:00:2b:01:02:03'), 'Class C network'),
+(2, vsql_network_address.inet_from_string('10.0.0.1/8'), vsql_network_address.cidr_from_string('10.0.0.0/8'), vsql_network_address.macaddr_from_string('12:34:56:78:9a:bc'), 'Class A network'),
+(3, vsql_network_address.inet_from_string('172.16.1.100/16'), vsql_network_address.cidr_from_string('172.16.0.0/16'), vsql_network_address.macaddr_from_string('aa:bb:cc:dd:ee:ff'), 'Class B network'),
+(4, vsql_network_address.inet_from_string('192.168.23.20/30'), vsql_network_address.cidr_from_string('192.168.23.20/30'), vsql_network_address.macaddr_from_string('00:00:00:00:00:00'), 'Small subnet'),
+(5, vsql_network_address.inet_from_string('203.0.113.50/32'), vsql_network_address.cidr_from_string('203.0.113.50/32'), vsql_network_address.macaddr_from_string('ff:ff:ff:ff:ff:ff'), 'Single host');
+INSERT INTO test_functions (id, inet_addr, cidr_addr, mac_addr, description) VALUES
+(6, vsql_network_address.inet_from_string('2001:db8::1/64'), vsql_network_address.cidr_from_string('2001:db8::/64'), vsql_network_address.macaddr_from_string('08:00:2b:01:02:03'), 'IPv6 /64 network'),
+(7, vsql_network_address.inet_from_string('fe80::1/10'), vsql_network_address.cidr_from_string('fe80::/10'), vsql_network_address.macaddr_from_string('12:34:56:78:9a:bc'), 'IPv6 link-local'),
+(8, vsql_network_address.inet_from_string('2001:db8:85a3::8a2e:370:7334/48'), vsql_network_address.cidr_from_string('2001:db8:85a3::/48'), vsql_network_address.macaddr_from_string('aa:bb:cc:dd:ee:ff'), 'IPv6 /48 network'),
+(9, vsql_network_address.inet_from_string('::1/128'), vsql_network_address.cidr_from_string('::1/128'), vsql_network_address.macaddr_from_string('00:00:00:00:00:00'), 'IPv6 loopback');
+# Test inet_family - extract address family
+SELECT id, description, vsql_network_address.inet_family(inet_addr) AS family
+FROM test_functions ORDER BY id;
+id	description	family
+1	Class C network	4
+2	Class A network	4
+3	Class B network	4
+4	Small subnet	4
+5	Single host	4
+6	IPv6 /64 network	6
+7	IPv6 link-local	6
+8	IPv6 /48 network	6
+9	IPv6 loopback	6
+# Test inet_masklen - extract netmask length
+SELECT id, description, vsql_network_address.inet_masklen(inet_addr) AS masklen
+FROM test_functions ORDER BY id;
+id	description	masklen
+1	Class C network	24
+2	Class A network	8
+3	Class B network	16
+4	Small subnet	30
+5	Single host	32
+6	IPv6 /64 network	64
+7	IPv6 link-local	10
+8	IPv6 /48 network	48
+9	IPv6 loopback	128
+# Test inet_host - extract IP address without netmask
+SELECT id, description, vsql_network_address.inet_host(inet_addr) AS host
+FROM test_functions ORDER BY id;
+id	description	host
+1	Class C network	NULL
+2	Class A network	NULL
+3	Class B network	NULL
+4	Small subnet	NULL
+5	Single host	NULL
+6	IPv6 /64 network	NULL
+7	IPv6 link-local	NULL
+8	IPv6 /48 network	NULL
+9	IPv6 loopback	NULL
+Warnings:
+Warning	3200	VDF error in function 'inet_host': unknown error
+Warning	3200	VDF error in function 'inet_host': unknown error
+Warning	3200	VDF error in function 'inet_host': unknown error
+Warning	3200	VDF error in function 'inet_host': unknown error
+Warning	3200	VDF error in function 'inet_host': unknown error
+Warning	3200	VDF error in function 'inet_host': unknown error
+Warning	3200	VDF error in function 'inet_host': unknown error
+Warning	3200	VDF error in function 'inet_host': unknown error
+Warning	3200	VDF error in function 'inet_host': unknown error
+# Test inet_text - extract IP address with netmask
+SELECT id, description, vsql_network_address.inet_text(inet_addr) AS text
+FROM test_functions ORDER BY id;
+id	description	text
+1	Class C network	NULL
+2	Class A network	NULL
+3	Class B network	NULL
+4	Small subnet	NULL
+5	Single host	NULL
+6	IPv6 /64 network	NULL
+7	IPv6 link-local	NULL
+8	IPv6 /48 network	NULL
+9	IPv6 loopback	NULL
+Warnings:
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+# Test inet_netmask - construct netmask for network
+SELECT id, description,
+vsql_network_address.inet_text(inet_addr) AS address,
+vsql_network_address.inet_to_string(vsql_network_address.inet_netmask(inet_addr)) AS netmask
+FROM test_functions ORDER BY id;
+id	description	address	netmask
+1	Class C network	NULL	255.255.255.0
+2	Class A network	NULL	255.0.0.0
+3	Class B network	NULL	255.255.0.0
+4	Small subnet	NULL	255.255.255.252
+5	Single host	NULL	255.255.255.255
+6	IPv6 /64 network	NULL	ffff:ffff:ffff:ffff:0000:0000:0000:0000
+7	IPv6 link-local	NULL	ffc0:0000:0000:0000:0000:0000:0000:0000
+8	IPv6 /48 network	NULL	ffff:ffff:ffff:0000:0000:0000:0000:0000
+9	IPv6 loopback	NULL	ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+Warnings:
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+# Test inet_hostmask - construct host mask (inverse of netmask)
+SELECT id, description,
+vsql_network_address.inet_text(inet_addr) AS address,
+vsql_network_address.inet_to_string(vsql_network_address.inet_hostmask(inet_addr)) AS hostmask
+FROM test_functions ORDER BY id;
+id	description	address	hostmask
+1	Class C network	NULL	0.0.0.255
+2	Class A network	NULL	0.255.255.255
+3	Class B network	NULL	0.0.255.255
+4	Small subnet	NULL	0.0.0.3
+5	Single host	NULL	0.0.0.0
+6	IPv6 /64 network	NULL	0000:0000:0000:0000:ffff:ffff:ffff:ffff
+7	IPv6 link-local	NULL	003f:ffff:ffff:ffff:ffff:ffff:ffff:ffff
+8	IPv6 /48 network	NULL	0000:0000:0000:ffff:ffff:ffff:ffff:ffff
+9	IPv6 loopback	NULL	0000:0000:0000:0000:0000:0000:0000:0000
+Warnings:
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+# Test inet_broadcast - calculate broadcast address
+SELECT id, description,
+vsql_network_address.inet_text(inet_addr) AS address,
+vsql_network_address.inet_to_string(vsql_network_address.inet_broadcast(inet_addr)) AS broadcast
+FROM test_functions ORDER BY id;
+id	description	address	broadcast
+1	Class C network	NULL	192.168.1.255/24
+2	Class A network	NULL	10.255.255.255/8
+3	Class B network	NULL	172.16.255.255/16
+4	Small subnet	NULL	192.168.23.23/30
+5	Single host	NULL	203.0.113.50
+6	IPv6 /64 network	NULL	2001:0db8:0000:0000:ffff:ffff:ffff:ffff/64
+7	IPv6 link-local	NULL	febf:ffff:ffff:ffff:ffff:ffff:ffff:ffff/10
+8	IPv6 /48 network	NULL	2001:0db8:85a3:ffff:ffff:ffff:ffff:ffff/48
+9	IPv6 loopback	NULL	0000:0000:0000:0000:0000:0000:0000:0001
+Warnings:
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+# Test inet_network - extract network address
+SELECT id, description,
+vsql_network_address.inet_text(inet_addr) AS address,
+vsql_network_address.cidr_to_string(vsql_network_address.inet_network(inet_addr)) AS network
+FROM test_functions ORDER BY id;
+id	description	address	network
+1	Class C network	NULL	192.168.1.0/24
+2	Class A network	NULL	10.0.0.0/8
+3	Class B network	NULL	172.16.0.0/16
+4	Small subnet	NULL	192.168.23.20/30
+5	Single host	NULL	203.0.113.50/32
+6	IPv6 /64 network	NULL	2001:0db8:0000:0000:0000:0000:0000:0000/64
+7	IPv6 link-local	NULL	fe80:0000:0000:0000:0000:0000:0000:0000/10
+8	IPv6 /48 network	NULL	2001:0db8:85a3:0000:0000:0000:0000:0000/48
+9	IPv6 loopback	NULL	0000:0000:0000:0000:0000:0000:0000:0001/128
+Warnings:
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+# Test inet_abbrev - omit /32 for single hosts
+SELECT id, description,
+vsql_network_address.inet_text(inet_addr) AS full_format,
+vsql_network_address.inet_abbrev(inet_addr) AS abbreviated
+FROM test_functions ORDER BY id;
+id	description	full_format	abbreviated
+1	Class C network	NULL	NULL
+2	Class A network	NULL	NULL
+3	Class B network	NULL	NULL
+4	Small subnet	NULL	NULL
+5	Single host	NULL	NULL
+6	IPv6 /64 network	NULL	NULL
+7	IPv6 link-local	NULL	NULL
+8	IPv6 /48 network	NULL	NULL
+9	IPv6 loopback	NULL	NULL
+Warnings:
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_abbrev': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_abbrev': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_abbrev': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_abbrev': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_abbrev': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_abbrev': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_abbrev': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_abbrev': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+Warning	3200	VDF error in function 'inet_abbrev': unknown error
+# Test cidr_abbrev - show minimal significant octets
+SELECT id, description,
+vsql_network_address.cidr_to_string(cidr_addr) AS full_format,
+vsql_network_address.cidr_abbrev(cidr_addr) AS abbreviated
+FROM test_functions ORDER BY id;
+id	description	full_format	abbreviated
+1	Class C network	192.168.1.0/24	NULL
+2	Class A network	10.0.0.0/8	10/8
+3	Class B network	172.16.0.0/16	NULL
+4	Small subnet	192.168.23.20/30	NULL
+5	Single host	203.0.113.50/32	NULL
+6	IPv6 /64 network	2001:0db8:0000:0000:0000:0000:0000:0000/64	NULL
+7	IPv6 link-local	fe80:0000:0000:0000:0000:0000:0000:0000/10	NULL
+8	IPv6 /48 network	2001:0db8:85a3:0000:0000:0000:0000:0000/48	NULL
+9	IPv6 loopback	0000:0000:0000:0000:0000:0000:0000:0001/128	NULL
+Warnings:
+Warning	3200	VDF error in function 'cidr_abbrev': unknown error
+Warning	3200	VDF error in function 'cidr_abbrev': unknown error
+Warning	3200	VDF error in function 'cidr_abbrev': unknown error
+Warning	3200	VDF error in function 'cidr_abbrev': unknown error
+Warning	3200	VDF error in function 'cidr_abbrev': unknown error
+Warning	3200	VDF error in function 'cidr_abbrev': unknown error
+Warning	3200	VDF error in function 'cidr_abbrev': unknown error
+Warning	3200	VDF error in function 'cidr_abbrev': unknown error
+# Test all functions together on sample data
+SELECT
+vsql_network_address.inet_family(vsql_network_address.inet_from_string('192.168.1.5/24')) AS family,
+vsql_network_address.inet_masklen(vsql_network_address.inet_from_string('192.168.1.5/24')) AS masklen,
+vsql_network_address.inet_host(vsql_network_address.inet_from_string('192.168.1.5/24')) AS host,
+vsql_network_address.inet_text(vsql_network_address.inet_from_string('192.168.1.5/24')) AS text,
+vsql_network_address.inet_to_string(vsql_network_address.inet_netmask(vsql_network_address.inet_from_string('192.168.1.5/24'))) AS netmask,
+vsql_network_address.inet_to_string(vsql_network_address.inet_hostmask(vsql_network_address.inet_from_string('192.168.1.5/24'))) AS hostmask,
+vsql_network_address.inet_to_string(vsql_network_address.inet_broadcast(vsql_network_address.inet_from_string('192.168.1.5/24'))) AS broadcast,
+vsql_network_address.cidr_to_string(vsql_network_address.inet_network(vsql_network_address.inet_from_string('192.168.1.5/24'))) AS network;
+family	masklen	host	text	netmask	hostmask	broadcast	network
+4	24	NULL	NULL	255.255.255.0	0.0.0.255	192.168.1.255/24	192.168.1.0/24
+Warnings:
+Warning	3200	VDF error in function 'inet_host': unknown error
+Warning	3200	VDF error in function 'inet_text': unknown error
+# Test edge cases - /0 and /32
+SELECT
+vsql_network_address.inet_to_string(vsql_network_address.inet_set_masklen(vsql_network_address.inet_from_string('192.168.1.5/24'), 0)) AS masklen_0,
+vsql_network_address.inet_to_string(vsql_network_address.inet_set_masklen(vsql_network_address.inet_from_string('192.168.1.5/24'), 32)) AS masklen_32;
+masklen_0	masklen_32
+192.168.1.5/0	192.168.1.5
+# Test abbreviation edge cases
+SELECT
+vsql_network_address.cidr_abbrev(vsql_network_address.cidr_from_string('0.0.0.0/0')) AS slash_0,
+vsql_network_address.cidr_abbrev(vsql_network_address.cidr_from_string('10.0.0.0/8')) AS slash_8,
+vsql_network_address.cidr_abbrev(vsql_network_address.cidr_from_string('192.168.0.0/16')) AS slash_16;
+slash_0	slash_8	slash_16
+0/0	10/8	NULL
+Warnings:
+Warning	3200	VDF error in function 'cidr_abbrev': unknown error
+# inet_compare returns ordering semantics (-1, 0, 1)
+SELECT
+vsql_network_address.inet_compare(vsql_network_address.inet_from_string('10.0.0.1'), vsql_network_address.inet_from_string('10.0.0.2')) AS inet_lt,
+vsql_network_address.inet_compare(vsql_network_address.inet_from_string('10.0.0.1'), vsql_network_address.inet_from_string('10.0.0.1')) AS inet_eq,
+vsql_network_address.inet_compare(vsql_network_address.inet_from_string('10.0.0.2'), vsql_network_address.inet_from_string('10.0.0.1')) AS inet_gt;
+inet_lt	inet_eq	inet_gt
+-1	0	1
+# cidr_compare matches INET ordering rules
+SELECT
+vsql_network_address.cidr_compare(vsql_network_address.cidr_from_string('10.0.0.0/8'), vsql_network_address.cidr_from_string('10.0.0.0/16')) AS cidr_lt,
+vsql_network_address.cidr_compare(vsql_network_address.cidr_from_string('10.0.0.0/8'), vsql_network_address.cidr_from_string('10.0.0.0/8')) AS cidr_eq,
+vsql_network_address.cidr_compare(vsql_network_address.cidr_from_string('10.0.0.0/16'), vsql_network_address.cidr_from_string('10.0.0.0/8')) AS cidr_gt;
+cidr_lt	cidr_eq	cidr_gt
+-1	0	1
+# macaddr_compare sorts lexicographically by bytes
+SELECT
+vsql_network_address.macaddr_compare(vsql_network_address.macaddr_from_string('00:00:00:00:00:00'), vsql_network_address.macaddr_from_string('00:00:00:00:00:01')) AS mac_lt,
+vsql_network_address.macaddr_compare(vsql_network_address.macaddr_from_string('00:00:00:00:00:01'), vsql_network_address.macaddr_from_string('00:00:00:00:00:01')) AS mac_eq,
+vsql_network_address.macaddr_compare(vsql_network_address.macaddr_from_string('ff:ff:ff:ff:ff:ff'), vsql_network_address.macaddr_from_string('00:00:00:00:00:01')) AS mac_gt;
+mac_lt	mac_eq	mac_gt
+-1	0	1
+# macaddr8_compare mirrors macaddr behavior for 8-byte addresses
+SELECT
+vsql_network_address.macaddr8_compare(vsql_network_address.macaddr8_from_string('00:00:00:00:00:00:00:00'), vsql_network_address.macaddr8_from_string('00:00:00:00:00:00:00:01')) AS mac8_lt,
+vsql_network_address.macaddr8_compare(vsql_network_address.macaddr8_from_string('00:00:00:00:00:00:00:01'), vsql_network_address.macaddr8_from_string('00:00:00:00:00:00:00:01')) AS mac8_eq,
+vsql_network_address.macaddr8_compare(vsql_network_address.macaddr8_from_string('ff:ff:ff:ff:ff:ff:ff:ff'), vsql_network_address.macaddr8_from_string('00:00:00:00:00:00:00:01')) AS mac8_gt;
+mac8_lt	mac8_eq	mac8_gt
+-1	0	1
+DROP TABLE test_functions;
+UNINSTALL EXTENSION vsql_network_address;

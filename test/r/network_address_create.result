@@ -1,0 +1,122 @@
+INSTALL EXTENSION vsql_network_address;
+DROP TABLE IF EXISTS test_cidr_basic, test_inet_basic, test_macaddr_basic, test_macaddr8_basic,
+test_network_mixed, test_network_constraints;
+CREATE TABLE test_cidr_basic (
+id INT AUTO_INCREMENT PRIMARY KEY,
+network CIDR
+);
+SHOW FULL COLUMNS FROM test_cidr_basic;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+network	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,references	
+DESCRIBE test_cidr_basic;
+Field	Type	Null	Key	Default	Extra
+id	int	NO	PRI	NULL	auto_increment
+network	vsql_network_address.CIDR	YES		NULL	
+CREATE TABLE test_inet_basic (
+id INT AUTO_INCREMENT PRIMARY KEY,
+address INET
+);
+SHOW FULL COLUMNS FROM test_inet_basic;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+address	vsql_network_address.INET	NULL	YES		NULL		select,insert,update,references	
+DESCRIBE test_inet_basic;
+Field	Type	Null	Key	Default	Extra
+id	int	NO	PRI	NULL	auto_increment
+address	vsql_network_address.INET	YES		NULL	
+CREATE TABLE test_macaddr_basic (
+id INT AUTO_INCREMENT PRIMARY KEY,
+mac MACADDR
+);
+SHOW FULL COLUMNS FROM test_macaddr_basic;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+mac	vsql_network_address.MACADDR	NULL	YES		NULL		select,insert,update,references	
+DESCRIBE test_macaddr_basic;
+Field	Type	Null	Key	Default	Extra
+id	int	NO	PRI	NULL	auto_increment
+mac	vsql_network_address.MACADDR	YES		NULL	
+CREATE TABLE test_macaddr8_basic (
+id INT AUTO_INCREMENT PRIMARY KEY,
+mac8 MACADDR8
+);
+SHOW FULL COLUMNS FROM test_macaddr8_basic;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+mac8	vsql_network_address.MACADDR8	NULL	YES		NULL		select,insert,update,references	
+DESCRIBE test_macaddr8_basic;
+Field	Type	Null	Key	Default	Extra
+id	int	NO	PRI	NULL	auto_increment
+mac8	vsql_network_address.MACADDR8	YES		NULL	
+CREATE TABLE test_network_nullable (
+id INT AUTO_INCREMENT PRIMARY KEY,
+nullable_cidr CIDR NULL,
+required_inet INET NOT NULL,
+nullable_mac MACADDR,
+required_mac8 MACADDR8 NOT NULL
+);
+SHOW FULL COLUMNS FROM test_network_nullable;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+nullable_cidr	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,references	
+required_inet	vsql_network_address.INET	NULL	NO		NULL		select,insert,update,references	
+nullable_mac	vsql_network_address.MACADDR	NULL	YES		NULL		select,insert,update,references	
+required_mac8	vsql_network_address.MACADDR8	NULL	NO		NULL		select,insert,update,references	
+CREATE TABLE test_network_mixed (
+id INT AUTO_INCREMENT PRIMARY KEY,
+name VARCHAR(100) NOT NULL,
+server_network CIDR,
+host_address INET NOT NULL,
+server_mac MACADDR,
+switch_mac MACADDR8,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+SHOW FULL COLUMNS FROM test_network_mixed;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+name	varchar(100)	utf8mb4_0900_ai_ci	NO		NULL		select,insert,update,references	
+server_network	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,references	
+host_address	vsql_network_address.INET	NULL	NO		NULL		select,insert,update,references	
+server_mac	vsql_network_address.MACADDR	NULL	YES		NULL		select,insert,update,references	
+switch_mac	vsql_network_address.MACADDR8	NULL	YES		NULL		select,insert,update,references	
+created_at	timestamp	NULL	YES		CURRENT_TIMESTAMP	DEFAULT_GENERATED	select,insert,update,references	
+CREATE TABLE test_network_constraints (
+id INT AUTO_INCREMENT PRIMARY KEY,
+unique_network CIDR NOT NULL UNIQUE,
+indexed_address INET NOT NULL,
+unique_mac MACADDR UNIQUE,
+indexed_mac8 MACADDR8,
+INDEX idx_address (indexed_address),
+INDEX idx_mac8 (indexed_mac8)
+);
+SHOW FULL COLUMNS FROM test_network_constraints;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+unique_network	vsql_network_address.CIDR	NULL	NO	UNI	NULL		select,insert,update,references	
+indexed_address	vsql_network_address.INET	NULL	NO	MUL	NULL		select,insert,update,references	
+unique_mac	vsql_network_address.MACADDR	NULL	YES	UNI	NULL		select,insert,update,references	
+indexed_mac8	vsql_network_address.MACADDR8	NULL	YES	MUL	NULL		select,insert,update,references	
+SHOW INDEX FROM test_network_constraints;
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment	Visible	Expression
+test_network_constraints	0	PRIMARY	1	id	A	0	NULL	NULL		BTREE			YES	NULL
+test_network_constraints	0	unique_network	1	unique_network	A	0	NULL	NULL		BTREE			YES	NULL
+test_network_constraints	0	unique_mac	1	unique_mac	A	0	NULL	NULL	YES	BTREE			YES	NULL
+test_network_constraints	1	idx_address	1	indexed_address	A	0	NULL	NULL		BTREE			YES	NULL
+test_network_constraints	1	idx_mac8	1	indexed_mac8	A	0	NULL	NULL	YES	BTREE			YES	NULL
+CREATE TABLE test_ipv6_support (
+id INT AUTO_INCREMENT PRIMARY KEY,
+ipv6_network CIDR,
+ipv6_address INET NOT NULL
+);
+INSERT INTO test_ipv6_support (ipv6_network, ipv6_address) VALUES
+(vsql_network_address.cidr_from_string('2001:db8::/32'), vsql_network_address.inet_from_string('2001:db8::1')),
+(vsql_network_address.cidr_from_string('fe80::/64'), vsql_network_address.inet_from_string('fe80::1/64'));
+SELECT id, vsql_network_address.cidr_to_string(ipv6_network), vsql_network_address.inet_to_string(ipv6_address)
+FROM test_ipv6_support ORDER BY id;
+id	vsql_network_address.cidr_to_string(ipv6_network)	vsql_network_address.inet_to_string(ipv6_address)
+1	2001:0db8:0000:0000:0000:0000:0000:0000/32	2001:0db8:0000:0000:0000:0000:0000:0001
+2	fe80:0000:0000:0000:0000:0000:0000:0000/64	fe80:0000:0000:0000:0000:0000:0000:0001/64
+DROP TABLE test_cidr_basic, test_inet_basic, test_macaddr_basic, test_macaddr8_basic,
+test_network_nullable, test_network_mixed, test_network_constraints, test_ipv6_support;
+UNINSTALL EXTENSION vsql_network_address;

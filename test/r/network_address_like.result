@@ -1,0 +1,177 @@
+INSTALL EXTENSION 'vsql-network-address';
+DROP TABLE IF EXISTS original_network_table, cloned_network_table,
+original_with_indexes, cloned_with_indexes,
+original_mixed, cloned_mixed;
+CREATE TABLE original_network_table (
+id INT AUTO_INCREMENT PRIMARY KEY,
+network CIDR,
+address INET NOT NULL,
+mac MACADDR,
+mac8 MACADDR8
+);
+CREATE TABLE cloned_network_table LIKE original_network_table;
+SHOW FULL COLUMNS FROM original_network_table;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+network	varbinary(21)	NULL	YES		NULL		select,insert,update,references	{VillageSQL: cidr, Version: 00}
+address	varbinary(21)	NULL	NO		NULL		select,insert,update,references	{VillageSQL: inet, Version: 00}
+mac	varbinary(8)	NULL	YES		NULL		select,insert,update,references	{VillageSQL: macaddr, Version: 00}
+mac8	varbinary(10)	NULL	YES		NULL		select,insert,update,references	{VillageSQL: macaddr8, Version: 00}
+SHOW FULL COLUMNS FROM cloned_network_table;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+network	varbinary(21)	NULL	YES		NULL		select,insert,update,references	{VillageSQL: cidr, Version: 00}
+address	varbinary(21)	NULL	NO		NULL		select,insert,update,references	{VillageSQL: inet, Version: 00}
+mac	varbinary(8)	NULL	YES		NULL		select,insert,update,references	{VillageSQL: macaddr, Version: 00}
+mac8	varbinary(10)	NULL	YES		NULL		select,insert,update,references	{VillageSQL: macaddr8, Version: 00}
+INSERT INTO original_network_table (network, address, mac, mac8)
+VALUES (
+cidr_from_string('192.168.1.0/24'),
+inet_from_string('192.168.1.5'),
+macaddr_from_string('08:00:2b:01:02:03'),
+macaddr8_from_string('08:00:2b:01:02:03:04:05')
+),
+(
+cidr_from_string('2001:db8::/32'),
+inet_from_string('2001:db8::1/64'),
+macaddr_from_string('aa:bb:cc:dd:ee:ff'),
+macaddr8_from_string('aa:bb:cc:dd:ee:ff:11:22')
+);
+INSERT INTO cloned_network_table (network, address, mac, mac8)
+VALUES (
+cidr_from_string('10.0.0.0/8'),
+inet_from_string('10.0.0.1'),
+macaddr_from_string('08:00:2b:aa:bb:cc'),
+macaddr8_from_string('08:00:2b:aa:bb:cc:dd:ee')
+),
+(
+cidr_from_string('fe80::/64'),
+inet_from_string('fe80::1'),
+macaddr_from_string('11:22:33:44:55:66'),
+macaddr8_from_string('11:22:33:44:55:66:77:88')
+);
+SELECT id, cidr_to_string(network), inet_to_string(address),
+macaddr_to_string(mac), macaddr8_to_string(mac8)
+FROM original_network_table;
+id	cidr_to_string(network)	inet_to_string(address)	macaddr_to_string(mac)	macaddr8_to_string(mac8)
+1	192.168.1.0/24	192.168.1.5	08:00:2b:01:02:03	08:00:2b:01:02:03:04:05
+2	2001:0db8:0000:0000:0000:0000:0000:0000/32	2001:0db8:0000:0000:0000:0000:0000:0001/64	aa:bb:cc:dd:ee:ff	aa:bb:cc:dd:ee:ff:11:22
+SELECT id, cidr_to_string(network), inet_to_string(address),
+macaddr_to_string(mac), macaddr8_to_string(mac8)
+FROM cloned_network_table;
+id	cidr_to_string(network)	inet_to_string(address)	macaddr_to_string(mac)	macaddr8_to_string(mac8)
+1	10.0.0.0/8	10.0.0.1	08:00:2b:aa:bb:cc	08:00:2b:aa:bb:cc:dd:ee
+2	fe80:0000:0000:0000:0000:0000:0000:0000/64	fe80:0000:0000:0000:0000:0000:0000:0001	11:22:33:44:55:66	11:22:33:44:55:66:77:88
+CREATE TABLE original_with_indexes (
+id INT AUTO_INCREMENT PRIMARY KEY,
+unique_network CIDR NOT NULL UNIQUE,
+indexed_address INET NOT NULL,
+unique_mac MACADDR UNIQUE,
+indexed_mac8 MACADDR8,
+INDEX idx_address (indexed_address),
+INDEX idx_mac8 (indexed_mac8)
+);
+CREATE TABLE cloned_with_indexes LIKE original_with_indexes;
+SHOW INDEX FROM original_with_indexes;
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment	Visible	Expression
+original_with_indexes	0	PRIMARY	1	id	A	0	NULL	NULL		BTREE			YES	NULL
+original_with_indexes	0	unique_network	1	unique_network	A	0	NULL	NULL		BTREE			YES	NULL
+original_with_indexes	0	unique_mac	1	unique_mac	A	0	NULL	NULL	YES	BTREE			YES	NULL
+original_with_indexes	1	idx_address	1	indexed_address	A	0	NULL	NULL		BTREE			YES	NULL
+original_with_indexes	1	idx_mac8	1	indexed_mac8	A	0	NULL	NULL	YES	BTREE			YES	NULL
+SHOW INDEX FROM cloned_with_indexes;
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment	Visible	Expression
+cloned_with_indexes	0	PRIMARY	1	id	A	0	NULL	NULL		BTREE			YES	NULL
+cloned_with_indexes	0	unique_network	1	unique_network	A	0	NULL	NULL		BTREE			YES	NULL
+cloned_with_indexes	0	unique_mac	1	unique_mac	A	0	NULL	NULL	YES	BTREE			YES	NULL
+cloned_with_indexes	1	idx_address	1	indexed_address	A	0	NULL	NULL		BTREE			YES	NULL
+cloned_with_indexes	1	idx_mac8	1	indexed_mac8	A	0	NULL	NULL	YES	BTREE			YES	NULL
+INSERT INTO cloned_with_indexes (unique_network, indexed_address, unique_mac, indexed_mac8)
+VALUES (
+cidr_from_string('192.168.1.0/24'),
+inet_from_string('192.168.1.5'),
+macaddr_from_string('08:00:2b:01:02:03'),
+macaddr8_from_string('08:00:2b:01:02:03:04:05')
+);
+INSERT INTO cloned_with_indexes (unique_network, indexed_address, unique_mac, indexed_mac8)
+VALUES (
+cidr_from_string('192.168.1.0/24'),
+inet_from_string('192.168.1.6'),
+macaddr_from_string('08:00:2b:01:02:04'),
+macaddr8_from_string('08:00:2b:01:02:03:04:06')
+);
+ERROR 23000: Duplicate entry '' for key 'cloned_with_indexes.unique_network'
+CREATE TABLE original_mixed (
+id INT AUTO_INCREMENT PRIMARY KEY,
+name VARCHAR(100) NOT NULL,
+server_network CIDR,
+host_address INET NOT NULL,
+server_mac MACADDR,
+created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+INDEX idx_name (name)
+);
+CREATE TABLE cloned_mixed LIKE original_mixed;
+SHOW FULL COLUMNS FROM original_mixed;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+name	varchar(100)	utf8mb4_0900_ai_ci	NO	MUL	NULL		select,insert,update,references	
+server_network	varbinary(21)	NULL	YES		NULL		select,insert,update,references	{VillageSQL: cidr, Version: 00}
+host_address	varbinary(21)	NULL	NO		NULL		select,insert,update,references	{VillageSQL: inet, Version: 00}
+server_mac	varbinary(8)	NULL	YES		NULL		select,insert,update,references	{VillageSQL: macaddr, Version: 00}
+created_at	timestamp	NULL	YES		CURRENT_TIMESTAMP	DEFAULT_GENERATED	select,insert,update,references	
+SHOW FULL COLUMNS FROM cloned_mixed;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+name	varchar(100)	utf8mb4_0900_ai_ci	NO	MUL	NULL		select,insert,update,references	
+server_network	varbinary(21)	NULL	YES		NULL		select,insert,update,references	{VillageSQL: cidr, Version: 00}
+host_address	varbinary(21)	NULL	NO		NULL		select,insert,update,references	{VillageSQL: inet, Version: 00}
+server_mac	varbinary(8)	NULL	YES		NULL		select,insert,update,references	{VillageSQL: macaddr, Version: 00}
+created_at	timestamp	NULL	YES		CURRENT_TIMESTAMP	DEFAULT_GENERATED	select,insert,update,references	
+INSERT INTO cloned_mixed (name, server_network, host_address, server_mac)
+VALUES (
+'web-server-01',
+cidr_from_string('10.0.1.0/24'),
+inet_from_string('10.0.1.10'),
+macaddr_from_string('00:1a:2b:3c:4d:5e')
+);
+SELECT id, name, cidr_to_string(server_network),
+inet_to_string(host_address), macaddr_to_string(server_mac)
+FROM cloned_mixed;
+id	name	cidr_to_string(server_network)	inet_to_string(host_address)	macaddr_to_string(server_mac)
+1	web-server-01	10.0.1.0/24	10.0.1.10	00:1a:2b:3c:4d:5e
+DROP TABLE original_network_table, cloned_network_table,
+original_with_indexes, cloned_with_indexes,
+original_mixed, cloned_mixed;
+#
+# TODO(villagesql): this cleanup shouldn't be necessary once we fix uninstall extension.
+#
+DROP FUNCTION IF EXISTS cidr_to_string;
+DROP FUNCTION IF EXISTS cidr_from_string;
+DROP FUNCTION IF EXISTS cidr_compare;
+DROP FUNCTION IF EXISTS inet_to_string;
+DROP FUNCTION IF EXISTS inet_from_string;
+DROP FUNCTION IF EXISTS inet_compare;
+DROP FUNCTION IF EXISTS macaddr_to_string;
+DROP FUNCTION IF EXISTS macaddr_from_string;
+DROP FUNCTION IF EXISTS macaddr_compare;
+DROP FUNCTION IF EXISTS macaddr8_to_string;
+DROP FUNCTION IF EXISTS macaddr8_from_string;
+DROP FUNCTION IF EXISTS macaddr8_compare;
+DROP FUNCTION IF EXISTS inet_family;
+DROP FUNCTION IF EXISTS inet_masklen;
+DROP FUNCTION IF EXISTS inet_host;
+DROP FUNCTION IF EXISTS inet_text;
+DROP FUNCTION IF EXISTS inet_netmask;
+DROP FUNCTION IF EXISTS inet_hostmask;
+DROP FUNCTION IF EXISTS inet_broadcast;
+DROP FUNCTION IF EXISTS inet_network;
+DROP FUNCTION IF EXISTS inet_set_masklen;
+DROP FUNCTION IF EXISTS cidr_set_masklen;
+DROP FUNCTION IF EXISTS macaddr_trunc;
+DROP FUNCTION IF EXISTS inet_abbrev;
+DROP FUNCTION IF EXISTS cidr_abbrev;
+DROP TYPE IF EXISTS CIDR;
+DROP TYPE IF EXISTS INET;
+DROP TYPE IF EXISTS MACADDR;
+DROP TYPE IF EXISTS MACADDR8;
+UNINSTALL EXTENSION 'vsql-network-address';

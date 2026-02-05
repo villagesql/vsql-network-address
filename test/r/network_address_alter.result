@@ -1,0 +1,237 @@
+INSTALL EXTENSION vsql_network_address;
+CREATE TABLE test_alter_add (
+id INT AUTO_INCREMENT PRIMARY KEY,
+name VARCHAR(100) NOT NULL
+);
+ALTER TABLE test_alter_add ADD COLUMN network CIDR;
+SHOW FULL COLUMNS FROM test_alter_add;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+name	varchar(100)	utf8mb4_0900_ai_ci	NO		NULL		select,insert,update,references	
+network	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,references	
+ALTER TABLE test_alter_add ADD COLUMN address INET;
+SHOW FULL COLUMNS FROM test_alter_add;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+name	varchar(100)	utf8mb4_0900_ai_ci	NO		NULL		select,insert,update,references	
+network	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,references	
+address	vsql_network_address.INET	NULL	YES		NULL		select,insert,update,references	
+ALTER TABLE test_alter_add ADD COLUMN mac MACADDR;
+SHOW FULL COLUMNS FROM test_alter_add;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+name	varchar(100)	utf8mb4_0900_ai_ci	NO		NULL		select,insert,update,references	
+network	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,references	
+address	vsql_network_address.INET	NULL	YES		NULL		select,insert,update,references	
+mac	vsql_network_address.MACADDR	NULL	YES		NULL		select,insert,update,references	
+ALTER TABLE test_alter_add ADD COLUMN mac8 MACADDR8;
+SHOW FULL COLUMNS FROM test_alter_add;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+name	varchar(100)	utf8mb4_0900_ai_ci	NO		NULL		select,insert,update,references	
+network	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,references	
+address	vsql_network_address.INET	NULL	YES		NULL		select,insert,update,references	
+mac	vsql_network_address.MACADDR	NULL	YES		NULL		select,insert,update,references	
+mac8	vsql_network_address.MACADDR8	NULL	YES		NULL		select,insert,update,references	
+INSERT INTO test_alter_add (name, network, address, mac, mac8)
+VALUES (
+'server-01',
+vsql_network_address.cidr_from_string('192.168.1.0/24'),
+vsql_network_address.inet_from_string('192.168.1.5'),
+vsql_network_address.macaddr_from_string('08:00:2b:01:02:03'),
+vsql_network_address.macaddr8_from_string('08:00:2b:01:02:03:04:05')
+),
+(
+'server-02-ipv6',
+vsql_network_address.cidr_from_string('2001:db8::/32'),
+vsql_network_address.inet_from_string('2001:db8::1/64'),
+vsql_network_address.macaddr_from_string('aa:bb:cc:dd:ee:ff'),
+vsql_network_address.macaddr8_from_string('aa:bb:cc:dd:ee:ff:11:22')
+);
+SELECT id, name, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address),
+vsql_network_address.macaddr_to_string(mac), vsql_network_address.macaddr8_to_string(mac8)
+FROM test_alter_add;
+id	name	vsql_network_address.cidr_to_string(network)	vsql_network_address.inet_to_string(address)	vsql_network_address.macaddr_to_string(mac)	vsql_network_address.macaddr8_to_string(mac8)
+1	server-01	192.168.1.0/24	192.168.1.5	08:00:2b:01:02:03	08:00:2b:01:02:03:04:05
+2	server-02-ipv6	2001:0db8:0000:0000:0000:0000:0000:0000/32	2001:0db8:0000:0000:0000:0000:0000:0001/64	aa:bb:cc:dd:ee:ff	aa:bb:cc:dd:ee:ff:11:22
+CREATE TABLE test_alter_drop (
+id INT AUTO_INCREMENT PRIMARY KEY,
+name VARCHAR(100),
+network CIDR,
+address INET,
+mac MACADDR,
+mac8 MACADDR8
+);
+INSERT INTO test_alter_drop (name, network, address, mac, mac8)
+VALUES (
+'test-data',
+vsql_network_address.cidr_from_string('10.0.0.0/8'),
+vsql_network_address.inet_from_string('10.0.0.1'),
+vsql_network_address.macaddr_from_string('aa:bb:cc:dd:ee:ff'),
+vsql_network_address.macaddr8_from_string('aa:bb:cc:dd:ee:ff:00:11')
+),
+(
+'test-data-ipv6',
+vsql_network_address.cidr_from_string('fe80::/64'),
+vsql_network_address.inet_from_string('fe80::1'),
+vsql_network_address.macaddr_from_string('11:22:33:44:55:66'),
+vsql_network_address.macaddr8_from_string('11:22:33:44:55:66:77:88')
+);
+ALTER TABLE test_alter_drop DROP COLUMN mac8;
+SHOW FULL COLUMNS FROM test_alter_drop;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+name	varchar(100)	utf8mb4_0900_ai_ci	YES		NULL		select,insert,update,references	
+network	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,references	
+address	vsql_network_address.INET	NULL	YES		NULL		select,insert,update,references	
+mac	vsql_network_address.MACADDR	NULL	YES		NULL		select,insert,update,references	
+SELECT id, name, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address),
+vsql_network_address.macaddr_to_string(mac)
+FROM test_alter_drop;
+id	name	vsql_network_address.cidr_to_string(network)	vsql_network_address.inet_to_string(address)	vsql_network_address.macaddr_to_string(mac)
+1	test-data	10.0.0.0/8	10.0.0.1	aa:bb:cc:dd:ee:ff
+2	test-data-ipv6	fe80:0000:0000:0000:0000:0000:0000:0000/64	fe80:0000:0000:0000:0000:0000:0000:0001	11:22:33:44:55:66
+ALTER TABLE test_alter_drop DROP COLUMN mac;
+SHOW FULL COLUMNS FROM test_alter_drop;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+name	varchar(100)	utf8mb4_0900_ai_ci	YES		NULL		select,insert,update,references	
+network	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,references	
+address	vsql_network_address.INET	NULL	YES		NULL		select,insert,update,references	
+ALTER TABLE test_alter_drop DROP COLUMN address;
+SHOW FULL COLUMNS FROM test_alter_drop;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+name	varchar(100)	utf8mb4_0900_ai_ci	YES		NULL		select,insert,update,references	
+network	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,references	
+ALTER TABLE test_alter_drop DROP COLUMN network;
+SHOW FULL COLUMNS FROM test_alter_drop;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+name	varchar(100)	utf8mb4_0900_ai_ci	YES		NULL		select,insert,update,references	
+CREATE TABLE test_alter_modify (
+id INT AUTO_INCREMENT PRIMARY KEY,
+network CIDR,
+address INET
+);
+INSERT INTO test_alter_modify (network, address)
+VALUES (
+vsql_network_address.cidr_from_string('192.168.1.0/24'),
+vsql_network_address.inet_from_string('192.168.1.5')
+),
+(
+vsql_network_address.cidr_from_string('2001:db8::/48'),
+vsql_network_address.inet_from_string('2001:db8::100/64')
+);
+ALTER TABLE test_alter_modify MODIFY COLUMN network CIDR NOT NULL;
+SHOW FULL COLUMNS FROM test_alter_modify;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+network	vsql_network_address.CIDR	NULL	NO		NULL		select,insert,update,references	
+address	vsql_network_address.INET	NULL	YES		NULL		select,insert,update,references	
+SELECT id, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address)
+FROM test_alter_modify;
+id	vsql_network_address.cidr_to_string(network)	vsql_network_address.inet_to_string(address)
+1	192.168.1.0/24	192.168.1.5
+2	2001:0db8:0000:0000:0000:0000:0000:0000/48	2001:0db8:0000:0000:0000:0000:0000:0100/64
+INSERT INTO test_alter_modify (network, address)
+VALUES (NULL, vsql_network_address.inet_from_string('10.0.0.1'));
+ERROR 23000: Column 'network' cannot be null
+CREATE TABLE test_alter_change (
+id INT AUTO_INCREMENT PRIMARY KEY,
+old_network CIDR,
+old_address INET,
+old_mac MACADDR
+);
+INSERT INTO test_alter_change (old_network, old_address, old_mac)
+VALUES (
+vsql_network_address.cidr_from_string('172.16.0.0/16'),
+vsql_network_address.inet_from_string('172.16.1.10'),
+vsql_network_address.macaddr_from_string('11:22:33:44:55:66')
+);
+ALTER TABLE test_alter_change CHANGE COLUMN old_network new_network CIDR;
+SHOW FULL COLUMNS FROM test_alter_change;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+new_network	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,references	
+old_address	vsql_network_address.INET	NULL	YES		NULL		select,insert,update,references	
+old_mac	vsql_network_address.MACADDR	NULL	YES		NULL		select,insert,update,references	
+ALTER TABLE test_alter_change CHANGE COLUMN old_address new_address INET NOT NULL;
+SHOW FULL COLUMNS FROM test_alter_change;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+new_network	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,references	
+new_address	vsql_network_address.INET	NULL	NO		NULL		select,insert,update,references	
+old_mac	vsql_network_address.MACADDR	NULL	YES		NULL		select,insert,update,references	
+ALTER TABLE test_alter_change CHANGE COLUMN old_mac new_mac MACADDR;
+SHOW FULL COLUMNS FROM test_alter_change;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+new_network	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,references	
+new_address	vsql_network_address.INET	NULL	NO		NULL		select,insert,update,references	
+new_mac	vsql_network_address.MACADDR	NULL	YES		NULL		select,insert,update,references	
+SELECT id, vsql_network_address.cidr_to_string(new_network), vsql_network_address.inet_to_string(new_address),
+vsql_network_address.macaddr_to_string(new_mac)
+FROM test_alter_change;
+id	vsql_network_address.cidr_to_string(new_network)	vsql_network_address.inet_to_string(new_address)	vsql_network_address.macaddr_to_string(new_mac)
+1	172.16.0.0/16	172.16.1.10	11:22:33:44:55:66
+CREATE TABLE test_alter_indexed (
+id INT AUTO_INCREMENT PRIMARY KEY,
+network CIDR
+);
+ALTER TABLE test_alter_indexed ADD INDEX idx_network (network);
+SHOW INDEX FROM test_alter_indexed;
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment	Visible	Expression
+test_alter_indexed	0	PRIMARY	1	id	A	0	NULL	NULL		BTREE			YES	NULL
+test_alter_indexed	1	idx_network	1	network	A	0	NULL	NULL	YES	BTREE			YES	NULL
+ALTER TABLE test_alter_indexed ADD UNIQUE INDEX idx_unique_network (network);
+SHOW INDEX FROM test_alter_indexed;
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment	Visible	Expression
+test_alter_indexed	0	PRIMARY	1	id	A	0	NULL	NULL		BTREE			YES	NULL
+test_alter_indexed	0	idx_unique_network	1	network	A	0	NULL	NULL	YES	BTREE			YES	NULL
+test_alter_indexed	1	idx_network	1	network	A	0	NULL	NULL	YES	BTREE			YES	NULL
+ALTER TABLE test_alter_indexed DROP INDEX idx_network;
+SHOW INDEX FROM test_alter_indexed;
+Table	Non_unique	Key_name	Seq_in_index	Column_name	Collation	Cardinality	Sub_part	Packed	Null	Index_type	Comment	Index_comment	Visible	Expression
+test_alter_indexed	0	PRIMARY	1	id	A	0	NULL	NULL		BTREE			YES	NULL
+test_alter_indexed	0	idx_unique_network	1	network	A	0	NULL	NULL	YES	BTREE			YES	NULL
+CREATE TABLE test_alter_mixed (
+id INT AUTO_INCREMENT PRIMARY KEY,
+name VARCHAR(100)
+);
+ALTER TABLE test_alter_mixed
+ADD COLUMN network CIDR,
+ADD COLUMN address INET,
+ADD COLUMN mac MACADDR;
+SHOW FULL COLUMNS FROM test_alter_mixed;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+name	varchar(100)	utf8mb4_0900_ai_ci	YES		NULL		select,insert,update,references	
+network	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,references	
+address	vsql_network_address.INET	NULL	YES		NULL		select,insert,update,references	
+mac	vsql_network_address.MACADDR	NULL	YES		NULL		select,insert,update,references	
+INSERT INTO test_alter_mixed (name, network, address, mac)
+VALUES (
+'multi-change',
+vsql_network_address.cidr_from_string('10.10.0.0/16'),
+vsql_network_address.inet_from_string('10.10.1.1'),
+vsql_network_address.macaddr_from_string('aa:bb:cc:11:22:33')
+);
+ALTER TABLE test_alter_mixed
+MODIFY COLUMN network CIDR NOT NULL,
+DROP COLUMN mac,
+ADD COLUMN mac8 MACADDR8;
+SHOW FULL COLUMNS FROM test_alter_mixed;
+Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
+id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
+name	varchar(100)	utf8mb4_0900_ai_ci	YES		NULL		select,insert,update,references	
+network	vsql_network_address.CIDR	NULL	NO		NULL		select,insert,update,references	
+address	vsql_network_address.INET	NULL	YES		NULL		select,insert,update,references	
+mac8	vsql_network_address.MACADDR8	NULL	YES		NULL		select,insert,update,references	
+SELECT id, name, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address)
+FROM test_alter_mixed;
+id	name	vsql_network_address.cidr_to_string(network)	vsql_network_address.inet_to_string(address)
+1	multi-change	10.10.0.0/16	10.10.1.1
+DROP TABLE test_alter_add, test_alter_drop, test_alter_modify,
+test_alter_change, test_alter_indexed, test_alter_mixed;
+UNINSTALL EXTENSION vsql_network_address;

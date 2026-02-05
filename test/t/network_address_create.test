@@ -1,0 +1,161 @@
+# Setup: Copy VEB to veb_dir if VSQL_NETWORK_ADDRESS_VEB is set, then install extension
+--let $veb_dest = `SELECT CONCAT(@@veb_dir, '/vsql_network_address.veb')`
+if ($VSQL_NETWORK_ADDRESS_VEB) {
+  --error 0,1
+  --remove_file $veb_dest
+  --copy_file $VSQL_NETWORK_ADDRESS_VEB $veb_dest
+}
+INSTALL EXTENSION vsql_network_address;
+
+########################################################################
+#
+# Test: network_address_create
+# Purpose: Comprehensive testing of network address data type creation scenarios
+# User Type: Database User (developer creating tables with network address columns)
+#
+########################################################################
+
+--replace_result $MYSQLTEST_VARDIR MYSQLTEST_VARDIR
+--replace_result $MYSQL_TEST_DIR MYSQL_TEST_DIR
+
+--disable_warnings
+DROP TABLE IF EXISTS test_cidr_basic, test_inet_basic, test_macaddr_basic, test_macaddr8_basic,
+                     test_network_mixed, test_network_constraints;
+--enable_warnings
+
+########################################################################
+#
+# Test 1: Basic CIDR column creation
+#
+########################################################################
+
+CREATE TABLE test_cidr_basic (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    network CIDR
+);
+
+SHOW FULL COLUMNS FROM test_cidr_basic;
+DESCRIBE test_cidr_basic;
+
+########################################################################
+#
+# Test 2: Basic INET column creation
+#
+########################################################################
+
+CREATE TABLE test_inet_basic (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    address INET
+);
+
+SHOW FULL COLUMNS FROM test_inet_basic;
+DESCRIBE test_inet_basic;
+
+########################################################################
+#
+# Test 3: Basic MACADDR column creation
+#
+########################################################################
+
+CREATE TABLE test_macaddr_basic (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    mac MACADDR
+);
+
+SHOW FULL COLUMNS FROM test_macaddr_basic;
+DESCRIBE test_macaddr_basic;
+
+########################################################################
+#
+# Test 4: Basic MACADDR8 column creation
+#
+########################################################################
+
+CREATE TABLE test_macaddr8_basic (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    mac8 MACADDR8
+);
+
+SHOW FULL COLUMNS FROM test_macaddr8_basic;
+DESCRIBE test_macaddr8_basic;
+
+########################################################################
+#
+# Test 5: Network addresses with NULL/NOT NULL constraints
+#
+########################################################################
+
+CREATE TABLE test_network_nullable (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    nullable_cidr CIDR NULL,
+    required_inet INET NOT NULL,
+    nullable_mac MACADDR,
+    required_mac8 MACADDR8 NOT NULL
+);
+
+SHOW FULL COLUMNS FROM test_network_nullable;
+
+########################################################################
+#
+# Test 6: Mixed data type scenarios with network addresses
+#
+########################################################################
+
+CREATE TABLE test_network_mixed (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    server_network CIDR,
+    host_address INET NOT NULL,
+    server_mac MACADDR,
+    switch_mac MACADDR8,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+SHOW FULL COLUMNS FROM test_network_mixed;
+
+########################################################################
+#
+# Test 7: Network address constraints and indexes
+#
+########################################################################
+
+CREATE TABLE test_network_constraints (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    unique_network CIDR NOT NULL UNIQUE,
+    indexed_address INET NOT NULL,
+    unique_mac MACADDR UNIQUE,
+    indexed_mac8 MACADDR8,
+    INDEX idx_address (indexed_address),
+    INDEX idx_mac8 (indexed_mac8)
+);
+
+SHOW FULL COLUMNS FROM test_network_constraints;
+SHOW INDEX FROM test_network_constraints;
+
+########################################################################
+#
+# Test 8: Verify IPv6 works with CREATE TABLE
+#
+########################################################################
+
+CREATE TABLE test_ipv6_support (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    ipv6_network CIDR,
+    ipv6_address INET NOT NULL
+);
+
+INSERT INTO test_ipv6_support (ipv6_network, ipv6_address) VALUES
+    (vsql_network_address.cidr_from_string('2001:db8::/32'), vsql_network_address.inet_from_string('2001:db8::1')),
+    (vsql_network_address.cidr_from_string('fe80::/64'), vsql_network_address.inet_from_string('fe80::1/64'));
+
+SELECT id, vsql_network_address.cidr_to_string(ipv6_network), vsql_network_address.inet_to_string(ipv6_address)
+FROM test_ipv6_support ORDER BY id;
+
+########################################################################
+# Cleanup
+########################################################################
+
+DROP TABLE test_cidr_basic, test_inet_basic, test_macaddr_basic, test_macaddr8_basic,
+           test_network_nullable, test_network_mixed, test_network_constraints, test_ipv6_support;
+
+UNINSTALL EXTENSION vsql_network_address;

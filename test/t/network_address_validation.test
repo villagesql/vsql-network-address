@@ -1,0 +1,222 @@
+# Setup: Copy VEB to veb_dir if VSQL_NETWORK_ADDRESS_VEB is set, then install extension
+--let $veb_dest = `SELECT CONCAT(@@veb_dir, '/vsql_network_address.veb')`
+if ($VSQL_NETWORK_ADDRESS_VEB) {
+  --error 0,1
+  --remove_file $veb_dest
+  --copy_file $VSQL_NETWORK_ADDRESS_VEB $veb_dest
+}
+INSTALL EXTENSION vsql_network_address;
+
+########################################################################
+#
+# Test: dbuser_network_address_validation
+# Purpose: Testing network address validation and error conditions
+# User Type: Database User (testing edge cases and validation behavior)
+#
+########################################################################
+
+--replace_result $MYSQLTEST_VARDIR MYSQLTEST_VARDIR
+--replace_result $MYSQL_TEST_DIR MYSQL_TEST_DIR
+
+--disable_warnings
+DROP TABLE IF EXISTS test_network_validation;
+--enable_warnings
+
+########################################################################
+# Setup test table
+########################################################################
+
+CREATE TABLE test_network_validation (
+    id INT PRIMARY KEY,
+    cidr_col CIDR,
+    inet_col INET,
+    mac_col MACADDR,
+    mac8_col MACADDR8
+);
+
+########################################################################
+#
+# Test 1: Valid CIDR formats
+#
+########################################################################
+
+--echo # Valid CIDR networks
+INSERT INTO test_network_validation (id, cidr_col) VALUES (1, vsql_network_address.cidr_from_string('192.168.1.0/24'));
+INSERT INTO test_network_validation (id, cidr_col) VALUES (2, vsql_network_address.cidr_from_string('10.0.0.0/8'));
+INSERT INTO test_network_validation (id, cidr_col) VALUES (3, vsql_network_address.cidr_from_string('172.16.0.0/16'));
+INSERT INTO test_network_validation (id, cidr_col) VALUES (4, vsql_network_address.cidr_from_string('0.0.0.0/0'));
+INSERT INTO test_network_validation (id, cidr_col) VALUES (5, vsql_network_address.cidr_from_string('192.168.1.128/25'));
+
+SELECT id, vsql_network_address.cidr_to_string(cidr_col) AS cidr_col FROM test_network_validation WHERE cidr_col IS NOT NULL ORDER BY id;
+
+########################################################################
+#
+# Test 2: Valid INET formats
+#
+########################################################################
+
+--echo # Valid INET addresses (with and without netmask)
+INSERT INTO test_network_validation (id, inet_col) VALUES (10, vsql_network_address.inet_from_string('192.168.1.1'));
+INSERT INTO test_network_validation (id, inet_col) VALUES (11, vsql_network_address.inet_from_string('192.168.1.1/24'));
+INSERT INTO test_network_validation (id, inet_col) VALUES (12, vsql_network_address.inet_from_string('10.0.0.1/8'));
+INSERT INTO test_network_validation (id, inet_col) VALUES (13, vsql_network_address.inet_from_string('172.16.1.100/16'));
+INSERT INTO test_network_validation (id, inet_col) VALUES (14, vsql_network_address.inet_from_string('203.0.113.50/24'));
+
+SELECT id, vsql_network_address.inet_to_string(inet_col) AS inet_col FROM test_network_validation WHERE inet_col IS NOT NULL ORDER BY id;
+
+########################################################################
+#
+# Test 3: Valid MACADDR formats
+#
+########################################################################
+
+--echo # Valid MAC addresses
+INSERT INTO test_network_validation (id, mac_col) VALUES (20, vsql_network_address.macaddr_from_string('08:00:2b:01:02:03'));
+INSERT INTO test_network_validation (id, mac_col) VALUES (21, vsql_network_address.macaddr_from_string('00:1b:44:11:3a:b7'));
+INSERT INTO test_network_validation (id, mac_col) VALUES (22, vsql_network_address.macaddr_from_string('aa:bb:cc:dd:ee:ff'));
+INSERT INTO test_network_validation (id, mac_col) VALUES (23, vsql_network_address.macaddr_from_string('00:00:00:00:00:00'));
+INSERT INTO test_network_validation (id, mac_col) VALUES (24, vsql_network_address.macaddr_from_string('ff:ff:ff:ff:ff:ff'));
+
+SELECT id, vsql_network_address.macaddr_to_string(mac_col) AS mac_col FROM test_network_validation WHERE mac_col IS NOT NULL ORDER BY id;
+
+########################################################################
+#
+# Test 4: Valid MACADDR8 formats
+#
+########################################################################
+
+--echo # Valid MACADDR8 addresses
+INSERT INTO test_network_validation (id, mac8_col) VALUES (30, vsql_network_address.macaddr8_from_string('08:00:2b:01:02:03:04:05'));
+INSERT INTO test_network_validation (id, mac8_col) VALUES (31, vsql_network_address.macaddr8_from_string('00:1b:44:11:3a:b7:c8:d9'));
+INSERT INTO test_network_validation (id, mac8_col) VALUES (32, vsql_network_address.macaddr8_from_string('aa:bb:cc:dd:ee:ff:11:22'));
+INSERT INTO test_network_validation (id, mac8_col) VALUES (33, vsql_network_address.macaddr8_from_string('00:00:00:00:00:00:00:00'));
+INSERT INTO test_network_validation (id, mac8_col) VALUES (34, vsql_network_address.macaddr8_from_string('ff:ff:ff:ff:ff:ff:ff:ff'));
+
+SELECT id, vsql_network_address.macaddr8_to_string(mac8_col) AS mac8_col FROM test_network_validation WHERE mac8_col IS NOT NULL ORDER BY id;
+
+########################################################################
+#
+# Test 5: MAC input format variations
+#
+########################################################################
+
+--echo # Hyphen and Cisco style MACADDR inputs normalize correctly
+INSERT INTO test_network_validation (id, mac_col) VALUES
+(40, vsql_network_address.macaddr_from_string('08-00-2b-01-02-03')),
+(41, vsql_network_address.macaddr_from_string('08002b:010203'));
+
+INSERT INTO test_network_validation (id, mac8_col) VALUES
+(42, vsql_network_address.macaddr8_from_string('08-00-2b-01-02-03-04-05')),
+(43, vsql_network_address.macaddr8_from_string('08002b:0102030405'));
+
+SELECT id, vsql_network_address.macaddr_to_string(mac_col) AS mac_col FROM test_network_validation WHERE id BETWEEN 40 AND 41 ORDER BY id;
+SELECT id, vsql_network_address.macaddr8_to_string(mac8_col) AS mac8_col FROM test_network_validation WHERE id BETWEEN 42 AND 43 ORDER BY id;
+
+########################################################################
+#
+# Test 6: Invalid formats - ensure we emit a UDF error on bad input
+#
+########################################################################
+
+--echo # CIDR rejects host bits and out-of-range prefixes (returns NULL)
+SELECT vsql_network_address.cidr_from_string('192.168.1.5/24') IS NULL AS cidr_host_bits_null;
+SELECT vsql_network_address.cidr_from_string('10.0.0.0/40') IS NULL AS cidr_mask_out_of_range;
+
+--echo # INET rejects bogus masks (returns NULL)
+SELECT vsql_network_address.inet_from_string('10.0.0.1/64') IS NULL AS inet_mask_out_of_range;
+
+--echo # MACADDR variants still raise when hex is incomplete
+SELECT vsql_network_address.macaddr_from_string('08:00:2b:01:02') IS NULL AS macaddr_incomplete;
+
+--echo # IPv6 should now be supported
+SELECT vsql_network_address.inet_from_string('2001:db8:0000:0000:0000:0000:0000:0001/64') IS NOT NULL AS inet_ipv6_supported;
+SELECT vsql_network_address.cidr_from_string('2001:0db8:0000:0000:0000:0000:0000:0000/48') IS NOT NULL AS cidr_ipv6_supported;
+
+########################################################################
+#
+# Test 7: IPv6 CIDR addresses
+#
+########################################################################
+
+--echo # Valid IPv6 CIDR networks
+INSERT INTO test_network_validation (id, cidr_col) VALUES (50, vsql_network_address.cidr_from_string('2001:0db8:0000:0000:0000:0000:0000:0000/32'));
+INSERT INTO test_network_validation (id, cidr_col) VALUES (51, vsql_network_address.cidr_from_string('2001:0db8:85a3:0000:0000:0000:0000:0000/48'));
+INSERT INTO test_network_validation (id, cidr_col) VALUES (52, vsql_network_address.cidr_from_string('fe80:0000:0000:0000:0000:0000:0000:0000/64'));
+INSERT INTO test_network_validation (id, cidr_col) VALUES (53, vsql_network_address.cidr_from_string('0000:0000:0000:0000:0000:0000:0000:0000/0'));
+
+SELECT id, vsql_network_address.cidr_to_string(cidr_col) AS cidr_col FROM test_network_validation WHERE id BETWEEN 50 AND 53 ORDER BY id;
+
+########################################################################
+#
+# Test 8: IPv6 INET addresses
+#
+########################################################################
+
+--echo # Valid IPv6 INET addresses (with and without netmask)
+INSERT INTO test_network_validation (id, inet_col) VALUES (60, vsql_network_address.inet_from_string('2001:0db8:0000:0000:0000:0000:0000:0001'));
+INSERT INTO test_network_validation (id, inet_col) VALUES (61, vsql_network_address.inet_from_string('2001:0db8:0000:0000:0000:0000:0000:0001/64'));
+INSERT INTO test_network_validation (id, inet_col) VALUES (62, vsql_network_address.inet_from_string('fe80:0000:0000:0000:0204:61ff:fe9d:f156/64'));
+INSERT INTO test_network_validation (id, inet_col) VALUES (63, vsql_network_address.inet_from_string('0000:0000:0000:0000:0000:0000:0000:0001'));
+
+SELECT id, vsql_network_address.inet_to_string(inet_col) AS inet_col FROM test_network_validation WHERE id BETWEEN 60 AND 63 ORDER BY id;
+
+########################################################################
+#
+# Test 9: IPv6 compressed notation
+#
+########################################################################
+
+--echo # IPv6 compressed notation with ::
+INSERT INTO test_network_validation (id, inet_col) VALUES (70, vsql_network_address.inet_from_string('2001:db8::1'));
+INSERT INTO test_network_validation (id, inet_col) VALUES (71, vsql_network_address.inet_from_string('::1'));
+INSERT INTO test_network_validation (id, inet_col) VALUES (72, vsql_network_address.inet_from_string('::'));
+INSERT INTO test_network_validation (id, cidr_col) VALUES (73, vsql_network_address.cidr_from_string('2001:db8::/32'));
+INSERT INTO test_network_validation (id, cidr_col) VALUES (74, vsql_network_address.cidr_from_string('fe80::/64'));
+
+SELECT id,
+       vsql_network_address.cidr_to_string(cidr_col) AS cidr_col,
+       vsql_network_address.inet_to_string(inet_col) AS inet_col
+FROM test_network_validation WHERE id BETWEEN 70 AND 74 ORDER BY id;
+
+########################################################################
+#
+# Test 10: Boundary conditions
+#
+########################################################################
+
+--echo # Test boundary conditions
+
+# Minimum and maximum valid prefix lengths
+INSERT INTO test_network_validation (id, cidr_col) VALUES (200, vsql_network_address.cidr_from_string('0.0.0.0/0'));
+INSERT INTO test_network_validation (id, cidr_col) VALUES (201, vsql_network_address.cidr_from_string('192.168.1.255/32'));
+
+# Edge case IP addresses
+INSERT INTO test_network_validation (id, inet_col) VALUES (210, vsql_network_address.inet_from_string('0.0.0.0'));
+INSERT INTO test_network_validation (id, inet_col) VALUES (211, vsql_network_address.inet_from_string('255.255.255.255'));
+
+# IPv6 boundary conditions
+INSERT INTO test_network_validation (id, cidr_col) VALUES (212, vsql_network_address.cidr_from_string('::/0'));
+INSERT INTO test_network_validation (id, cidr_col) VALUES (213, vsql_network_address.cidr_from_string('ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff/128'));
+
+# All zeros and all ones MAC addresses
+INSERT INTO test_network_validation (id, mac_col, mac8_col) VALUES
+(220, vsql_network_address.macaddr_from_string('00:00:00:00:00:00'), vsql_network_address.macaddr8_from_string('00:00:00:00:00:00:00:00'));
+
+SELECT id,
+       vsql_network_address.cidr_to_string(cidr_col) AS cidr_col,
+       vsql_network_address.inet_to_string(inet_col) AS inet_col,
+       vsql_network_address.macaddr_to_string(mac_col) AS mac_col,
+       vsql_network_address.macaddr8_to_string(mac8_col) AS mac8_col
+FROM test_network_validation WHERE id >= 200 ORDER BY id;
+
+--echo # Verify data was inserted for boundary conditions
+SELECT COUNT(*) as boundary_records FROM test_network_validation WHERE id >= 200;
+
+########################################################################
+# Cleanup
+########################################################################
+
+DROP TABLE test_network_validation;
+
+# Remove extension from registry
+UNINSTALL EXTENSION vsql_network_address;

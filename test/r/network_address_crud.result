@@ -1,0 +1,206 @@
+INSTALL EXTENSION vsql_network_address;
+DROP TABLE IF EXISTS test_network_crud;
+CREATE TABLE test_network_crud (
+id INT PRIMARY KEY,
+name VARCHAR(100),
+network CIDR,
+host_addr INET NOT NULL,
+server_mac MACADDR,
+switch_mac MACADDR8
+);
+INSERT INTO test_network_crud (id, name, network, host_addr, server_mac, switch_mac) VALUES
+(1, 'Server 1', vsql_network_address.cidr_from_string('192.168.1.0/24'), vsql_network_address.inet_from_string('192.168.1.100'), vsql_network_address.macaddr_from_string('08:00:2b:01:02:03'), vsql_network_address.macaddr8_from_string('08:00:2b:01:02:03:04:05'));
+INSERT INTO test_network_crud (id, name, network, host_addr, server_mac, switch_mac) VALUES
+(2, 'Server 2', vsql_network_address.cidr_from_string('10.0.0.0/8'), vsql_network_address.inet_from_string('10.1.1.50'), vsql_network_address.macaddr_from_string('00:1b:44:11:3a:b7'), vsql_network_address.macaddr8_from_string('00:1b:44:11:3a:b7:c8:d9'));
+INSERT INTO test_network_crud (id, name, network, host_addr, server_mac, switch_mac) VALUES
+(3, 'Server 3', vsql_network_address.cidr_from_string('172.16.0.0/16'), vsql_network_address.inet_from_string('172.16.5.25'), vsql_network_address.macaddr_from_string('aa:bb:cc:dd:ee:ff'), vsql_network_address.macaddr8_from_string('aa:bb:cc:dd:ee:ff:11:22'));
+INSERT INTO test_network_crud (id, name, network, host_addr, server_mac, switch_mac) VALUES
+(4, 'Server 4', vsql_network_address.cidr_from_string('203.0.113.0/24'), vsql_network_address.inet_from_string('203.0.113.10'), vsql_network_address.macaddr_from_string('00:00:00:00:00:00'), vsql_network_address.macaddr8_from_string('00:00:00:00:00:00:00:00'));
+# IPv6 should now be supported
+INSERT INTO test_network_crud (id, name, network, host_addr, server_mac, switch_mac) VALUES
+(10, 'IPv6 Server 1', vsql_network_address.cidr_from_string('2001:db8::/32'), vsql_network_address.inet_from_string('2001:db8::1'), vsql_network_address.macaddr_from_string('08:00:2b:01:02:03'), vsql_network_address.macaddr8_from_string('08:00:2b:01:02:03:04:05'));
+INSERT INTO test_network_crud (id, name, network, host_addr, server_mac, switch_mac) VALUES
+(11, 'IPv6 Server 2', vsql_network_address.cidr_from_string('fe80::/64'), vsql_network_address.inet_from_string('fe80::1'), vsql_network_address.macaddr_from_string('00:1b:44:11:3a:b7'), vsql_network_address.macaddr8_from_string('00:1b:44:11:3a:b7:c8:d9'));
+INSERT INTO test_network_crud (id, name, network, host_addr, server_mac, switch_mac) VALUES
+(12, 'IPv6 Server 3', vsql_network_address.cidr_from_string('2001:db8:85a3::/48'), vsql_network_address.inet_from_string('2001:db8:85a3::8a2e:370:7334/64'), vsql_network_address.macaddr_from_string('aa:bb:cc:dd:ee:ff'), vsql_network_address.macaddr8_from_string('aa:bb:cc:dd:ee:ff:11:22'));
+# Select IPv6 records
+SELECT id, name,
+vsql_network_address.cidr_to_string(network) AS network,
+vsql_network_address.inet_to_string(host_addr) AS host_addr,
+vsql_network_address.macaddr_to_string(server_mac) AS server_mac,
+vsql_network_address.macaddr8_to_string(switch_mac) AS switch_mac
+FROM test_network_crud WHERE id BETWEEN 10 AND 12 ORDER BY id;
+id	name	network	host_addr	server_mac	switch_mac
+10	IPv6 Server 1	2001:0db8:0000:0000:0000:0000:0000:0000/32	2001:0db8:0000:0000:0000:0000:0000:0001	08:00:2b:01:02:03	08:00:2b:01:02:03:04:05
+11	IPv6 Server 2	fe80:0000:0000:0000:0000:0000:0000:0000/64	fe80:0000:0000:0000:0000:0000:0000:0001	00:1b:44:11:3a:b7	00:1b:44:11:3a:b7:c8:d9
+12	IPv6 Server 3	2001:0db8:85a3:0000:0000:0000:0000:0000/48	2001:0db8:85a3:0000:0000:8a2e:0370:7334/64	aa:bb:cc:dd:ee:ff	aa:bb:cc:dd:ee:ff:11:22
+# Select all records - using UDF helper functions to display readable format
+SELECT id, name,
+vsql_network_address.cidr_to_string(network) AS network,
+vsql_network_address.inet_to_string(host_addr) AS host_addr,
+vsql_network_address.macaddr_to_string(server_mac) AS server_mac,
+vsql_network_address.macaddr8_to_string(switch_mac) AS switch_mac
+FROM test_network_crud ORDER BY id;
+id	name	network	host_addr	server_mac	switch_mac
+1	Server 1	192.168.1.0/24	192.168.1.100	08:00:2b:01:02:03	08:00:2b:01:02:03:04:05
+2	Server 2	10.0.0.0/8	10.1.1.50	00:1b:44:11:3a:b7	00:1b:44:11:3a:b7:c8:d9
+3	Server 3	172.16.0.0/16	172.16.5.25	aa:bb:cc:dd:ee:ff	aa:bb:cc:dd:ee:ff:11:22
+4	Server 4	203.0.113.0/24	203.0.113.10	00:00:00:00:00:00	00:00:00:00:00:00:00:00
+10	IPv6 Server 1	2001:0db8:0000:0000:0000:0000:0000:0000/32	2001:0db8:0000:0000:0000:0000:0000:0001	08:00:2b:01:02:03	08:00:2b:01:02:03:04:05
+11	IPv6 Server 2	fe80:0000:0000:0000:0000:0000:0000:0000/64	fe80:0000:0000:0000:0000:0000:0000:0001	00:1b:44:11:3a:b7	00:1b:44:11:3a:b7:c8:d9
+12	IPv6 Server 3	2001:0db8:85a3:0000:0000:0000:0000:0000/48	2001:0db8:85a3:0000:0000:8a2e:0370:7334/64	aa:bb:cc:dd:ee:ff	aa:bb:cc:dd:ee:ff:11:22
+# Select specific network address types using helper functions
+SELECT id, name, vsql_network_address.cidr_to_string(network) AS network FROM test_network_crud ORDER BY id;
+id	name	network
+1	Server 1	192.168.1.0/24
+2	Server 2	10.0.0.0/8
+3	Server 3	172.16.0.0/16
+4	Server 4	203.0.113.0/24
+10	IPv6 Server 1	2001:0db8:0000:0000:0000:0000:0000:0000/32
+11	IPv6 Server 2	fe80:0000:0000:0000:0000:0000:0000:0000/64
+12	IPv6 Server 3	2001:0db8:85a3:0000:0000:0000:0000:0000/48
+SELECT id, name, vsql_network_address.inet_to_string(host_addr) AS host_addr FROM test_network_crud ORDER BY id;
+id	name	host_addr
+1	Server 1	192.168.1.100
+2	Server 2	10.1.1.50
+3	Server 3	172.16.5.25
+4	Server 4	203.0.113.10
+10	IPv6 Server 1	2001:0db8:0000:0000:0000:0000:0000:0001
+11	IPv6 Server 2	fe80:0000:0000:0000:0000:0000:0000:0001
+12	IPv6 Server 3	2001:0db8:85a3:0000:0000:8a2e:0370:7334/64
+SELECT id, name, vsql_network_address.macaddr_to_string(server_mac) AS server_mac FROM test_network_crud ORDER BY id;
+id	name	server_mac
+1	Server 1	08:00:2b:01:02:03
+2	Server 2	00:1b:44:11:3a:b7
+3	Server 3	aa:bb:cc:dd:ee:ff
+4	Server 4	00:00:00:00:00:00
+10	IPv6 Server 1	08:00:2b:01:02:03
+11	IPv6 Server 2	00:1b:44:11:3a:b7
+12	IPv6 Server 3	aa:bb:cc:dd:ee:ff
+SELECT id, name, vsql_network_address.macaddr8_to_string(switch_mac) AS switch_mac FROM test_network_crud ORDER BY id;
+id	name	switch_mac
+1	Server 1	08:00:2b:01:02:03:04:05
+2	Server 2	00:1b:44:11:3a:b7:c8:d9
+3	Server 3	aa:bb:cc:dd:ee:ff:11:22
+4	Server 4	00:00:00:00:00:00:00:00
+10	IPv6 Server 1	08:00:2b:01:02:03:04:05
+11	IPv6 Server 2	00:1b:44:11:3a:b7:c8:d9
+12	IPv6 Server 3	aa:bb:cc:dd:ee:ff:11:22
+# Update CIDR network
+UPDATE test_network_crud SET network = vsql_network_address.cidr_from_string('192.168.2.0/24') WHERE id = 1;
+SELECT id, name, vsql_network_address.cidr_to_string(network) AS network FROM test_network_crud WHERE id = 1;
+id	name	network
+1	Server 1	192.168.2.0/24
+# Update INET address
+UPDATE test_network_crud SET host_addr = vsql_network_address.inet_from_string('192.168.2.200') WHERE id = 1;
+SELECT id, name, vsql_network_address.inet_to_string(host_addr) AS host_addr FROM test_network_crud WHERE id = 1;
+id	name	host_addr
+1	Server 1	192.168.2.200
+# Update MAC addresses
+UPDATE test_network_crud SET server_mac = vsql_network_address.macaddr_from_string('ff:ff:ff:ff:ff:ff') WHERE id = 1;
+UPDATE test_network_crud SET switch_mac = vsql_network_address.macaddr8_from_string('ff:ff:ff:ff:ff:ff:ff:ff') WHERE id = 1;
+SELECT id, name, vsql_network_address.macaddr_to_string(server_mac) AS server_mac, vsql_network_address.macaddr8_to_string(switch_mac) AS switch_mac FROM test_network_crud WHERE id = 1;
+id	name	server_mac	switch_mac
+1	Server 1	ff:ff:ff:ff:ff:ff	ff:ff:ff:ff:ff:ff:ff:ff
+# Filter by network address
+SELECT id, name,
+vsql_network_address.cidr_to_string(network) AS network,
+vsql_network_address.inet_to_string(host_addr) AS host_addr,
+vsql_network_address.macaddr_to_string(server_mac) AS server_mac,
+vsql_network_address.macaddr8_to_string(switch_mac) AS switch_mac
+FROM test_network_crud WHERE network = vsql_network_address.cidr_from_string('10.0.0.0/8');
+id	name	network	host_addr	server_mac	switch_mac
+2	Server 2	10.0.0.0/8	10.1.1.50	00:1b:44:11:3a:b7	00:1b:44:11:3a:b7:c8:d9
+# Filter by host address
+SELECT id, name,
+vsql_network_address.cidr_to_string(network) AS network,
+vsql_network_address.inet_to_string(host_addr) AS host_addr,
+vsql_network_address.macaddr_to_string(server_mac) AS server_mac,
+vsql_network_address.macaddr8_to_string(switch_mac) AS switch_mac
+FROM test_network_crud WHERE host_addr = vsql_network_address.inet_from_string('192.168.2.200');
+id	name	network	host_addr	server_mac	switch_mac
+1	Server 1	192.168.2.0/24	192.168.2.200	ff:ff:ff:ff:ff:ff	ff:ff:ff:ff:ff:ff:ff:ff
+# Filter by MAC address
+SELECT id, name,
+vsql_network_address.cidr_to_string(network) AS network,
+vsql_network_address.inet_to_string(host_addr) AS host_addr,
+vsql_network_address.macaddr_to_string(server_mac) AS server_mac,
+vsql_network_address.macaddr8_to_string(switch_mac) AS switch_mac
+FROM test_network_crud WHERE server_mac = vsql_network_address.macaddr_from_string('aa:bb:cc:dd:ee:ff');
+id	name	network	host_addr	server_mac	switch_mac
+3	Server 3	172.16.0.0/16	172.16.5.25	aa:bb:cc:dd:ee:ff	aa:bb:cc:dd:ee:ff:11:22
+12	IPv6 Server 3	2001:0db8:85a3:0000:0000:0000:0000:0000/48	2001:0db8:85a3:0000:0000:8a2e:0370:7334/64	aa:bb:cc:dd:ee:ff	aa:bb:cc:dd:ee:ff:11:22
+# Sort by network address
+SELECT id, name, vsql_network_address.cidr_to_string(network) AS network FROM test_network_crud ORDER BY network;
+id	name	network
+2	Server 2	10.0.0.0/8
+3	Server 3	172.16.0.0/16
+1	Server 1	192.168.2.0/24
+10	IPv6 Server 1	2001:0db8:0000:0000
+12	IPv6 Server 3	2001:0db8:85a3:0000
+4	Server 4	203.0.113.0/24
+11	IPv6 Server 2	fe80:0000:0000:0000
+# Sort by host address
+SELECT id, name, vsql_network_address.inet_to_string(host_addr) AS host_addr FROM test_network_crud ORDER BY host_addr;
+id	name	host_addr
+2	Server 2	10.1.1.50
+3	Server 3	172.16.5.25
+1	Server 1	192.168.2.200
+10	IPv6 Server 1	2001:0db8:0000:0000
+12	IPv6 Server 3	2001:0db8:85a3:0000
+4	Server 4	203.0.113.10
+11	IPv6 Server 2	fe80:0000:0000:0000
+# Sort by MAC address
+SELECT id, name, vsql_network_address.macaddr_to_string(server_mac) AS server_mac FROM test_network_crud ORDER BY server_mac;
+id	name	server_mac
+4	Server 4	00:00:
+2	Server 2	00:1b:
+11	IPv6 Server 2	00:1b:
+10	IPv6 Server 1	08:00:
+3	Server 3	aa:bb:
+12	IPv6 Server 3	aa:bb:
+1	Server 1	ff:ff:
+# Sort by MACADDR8
+SELECT id, name, vsql_network_address.macaddr8_to_string(switch_mac) AS switch_mac FROM test_network_crud ORDER BY switch_mac;
+id	name	switch_mac
+4	Server 4	00:00:00
+2	Server 2	00:1b:44
+11	IPv6 Server 2	00:1b:44
+10	IPv6 Server 1	08:00:2b
+3	Server 3	aa:bb:cc
+12	IPv6 Server 3	aa:bb:cc
+1	Server 1	ff:ff:ff
+# Insert record with NULL optional fields
+INSERT INTO test_network_crud (id, name, network, host_addr) VALUES
+(5, 'Server 5', NULL, '1.2.3.4');
+# Select showing NULL values
+SELECT id, name,
+vsql_network_address.cidr_to_string(network) AS network,
+vsql_network_address.inet_to_string(host_addr) AS host_addr,
+vsql_network_address.macaddr_to_string(server_mac) AS server_mac,
+vsql_network_address.macaddr8_to_string(switch_mac) AS switch_mac
+FROM test_network_crud WHERE id = 5;
+id	name	network	host_addr	server_mac	switch_mac
+5	Server 5	NULL	1.2.3.4	NULL	NULL
+# Update NULL fields
+UPDATE test_network_crud SET network = vsql_network_address.cidr_from_string('1.2.3.0/24'), server_mac = vsql_network_address.macaddr_from_string('12:34:56:78:9a:bc') WHERE id = 5;
+SELECT id, name,
+vsql_network_address.cidr_to_string(network) AS network,
+vsql_network_address.inet_to_string(host_addr) AS host_addr,
+vsql_network_address.macaddr_to_string(server_mac) AS server_mac,
+vsql_network_address.macaddr8_to_string(switch_mac) AS switch_mac
+FROM test_network_crud WHERE id = 5;
+id	name	network	host_addr	server_mac	switch_mac
+5	Server 5	1.2.3.0/24	1.2.3.4	12:34:56:78:9a:bc	NULL
+# Delete specific record
+DELETE FROM test_network_crud WHERE id = 5;
+SELECT COUNT(*) FROM test_network_crud;
+COUNT(*)
+7
+# Delete by network address
+DELETE FROM test_network_crud WHERE network = vsql_network_address.cidr_from_string('203.0.113.0/24');
+SELECT COUNT(*) FROM test_network_crud;
+COUNT(*)
+6
+DROP TABLE test_network_crud;
+UNINSTALL EXTENSION vsql_network_address;

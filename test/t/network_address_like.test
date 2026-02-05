@@ -1,0 +1,173 @@
+# Setup: Copy VEB to veb_dir if VSQL_NETWORK_ADDRESS_VEB is set, then install extension
+--let $veb_dest = `SELECT CONCAT(@@veb_dir, '/vsql_network_address.veb')`
+if ($VSQL_NETWORK_ADDRESS_VEB) {
+  --error 0,1
+  --remove_file $veb_dest
+  --copy_file $VSQL_NETWORK_ADDRESS_VEB $veb_dest
+}
+INSTALL EXTENSION vsql_network_address;
+
+########################################################################
+#
+# Test: network_address_like
+# Purpose: Test CREATE TABLE ... LIKE with network address custom types
+# User Type: Database User (developer cloning table structures)
+#
+########################################################################
+
+--replace_result $MYSQLTEST_VARDIR MYSQLTEST_VARDIR
+--replace_result $MYSQL_TEST_DIR MYSQL_TEST_DIR
+
+--disable_warnings
+DROP TABLE IF EXISTS original_network_table, cloned_network_table,
+                     original_with_indexes, cloned_with_indexes,
+                     original_mixed, cloned_mixed;
+--enable_warnings
+
+########################################################################
+#
+# Test 1: Basic CREATE TABLE ... LIKE with all network address types
+#
+########################################################################
+
+CREATE TABLE original_network_table (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    network CIDR,
+    address INET NOT NULL,
+    mac MACADDR,
+    mac8 MACADDR8
+);
+
+# Clone the table structure
+CREATE TABLE cloned_network_table LIKE original_network_table;
+
+# Verify structure is identical
+SHOW FULL COLUMNS FROM original_network_table;
+SHOW FULL COLUMNS FROM cloned_network_table;
+
+# Verify both tables work with data (IPv4 and IPv6)
+INSERT INTO original_network_table (network, address, mac, mac8)
+VALUES (
+    vsql_network_address.cidr_from_string('192.168.1.0/24'),
+    vsql_network_address.inet_from_string('192.168.1.5'),
+    vsql_network_address.macaddr_from_string('08:00:2b:01:02:03'),
+    vsql_network_address.macaddr8_from_string('08:00:2b:01:02:03:04:05')
+),
+(
+    vsql_network_address.cidr_from_string('2001:db8::/32'),
+    vsql_network_address.inet_from_string('2001:db8::1/64'),
+    vsql_network_address.macaddr_from_string('aa:bb:cc:dd:ee:ff'),
+    vsql_network_address.macaddr8_from_string('aa:bb:cc:dd:ee:ff:11:22')
+);
+
+INSERT INTO cloned_network_table (network, address, mac, mac8)
+VALUES (
+    vsql_network_address.cidr_from_string('10.0.0.0/8'),
+    vsql_network_address.inet_from_string('10.0.0.1'),
+    vsql_network_address.macaddr_from_string('08:00:2b:aa:bb:cc'),
+    vsql_network_address.macaddr8_from_string('08:00:2b:aa:bb:cc:dd:ee')
+),
+(
+    vsql_network_address.cidr_from_string('fe80::/64'),
+    vsql_network_address.inet_from_string('fe80::1'),
+    vsql_network_address.macaddr_from_string('11:22:33:44:55:66'),
+    vsql_network_address.macaddr8_from_string('11:22:33:44:55:66:77:88')
+);
+
+# Verify data is separate
+SELECT id, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address),
+       vsql_network_address.macaddr_to_string(mac), vsql_network_address.macaddr8_to_string(mac8)
+FROM original_network_table;
+
+SELECT id, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address),
+       vsql_network_address.macaddr_to_string(mac), vsql_network_address.macaddr8_to_string(mac8)
+FROM cloned_network_table;
+
+########################################################################
+#
+# Test 2: CREATE TABLE ... LIKE with indexes on network address columns
+#
+########################################################################
+
+CREATE TABLE original_with_indexes (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    unique_network CIDR NOT NULL UNIQUE,
+    indexed_address INET NOT NULL,
+    unique_mac MACADDR UNIQUE,
+    indexed_mac8 MACADDR8,
+    INDEX idx_address (indexed_address),
+    INDEX idx_mac8 (indexed_mac8)
+);
+
+# Clone the table with indexes
+CREATE TABLE cloned_with_indexes LIKE original_with_indexes;
+
+# Verify indexes are cloned
+SHOW INDEX FROM original_with_indexes;
+SHOW INDEX FROM cloned_with_indexes;
+
+# Test that unique constraints work on cloned table
+INSERT INTO cloned_with_indexes (unique_network, indexed_address, unique_mac, indexed_mac8)
+VALUES (
+    vsql_network_address.cidr_from_string('192.168.1.0/24'),
+    vsql_network_address.inet_from_string('192.168.1.5'),
+    vsql_network_address.macaddr_from_string('08:00:2b:01:02:03'),
+    vsql_network_address.macaddr8_from_string('08:00:2b:01:02:03:04:05')
+);
+
+# This should fail due to UNIQUE constraint on cloned table
+--error ER_DUP_ENTRY
+INSERT INTO cloned_with_indexes (unique_network, indexed_address, unique_mac, indexed_mac8)
+VALUES (
+    vsql_network_address.cidr_from_string('192.168.1.0/24'),
+    vsql_network_address.inet_from_string('192.168.1.6'),
+    vsql_network_address.macaddr_from_string('08:00:2b:01:02:04'),
+    vsql_network_address.macaddr8_from_string('08:00:2b:01:02:03:04:06')
+);
+
+########################################################################
+#
+# Test 3: CREATE TABLE ... LIKE with mixed data types
+#
+########################################################################
+
+CREATE TABLE original_mixed (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
+    server_network CIDR,
+    host_address INET NOT NULL,
+    server_mac MACADDR,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_name (name)
+);
+
+# Clone mixed table
+CREATE TABLE cloned_mixed LIKE original_mixed;
+
+# Verify structure
+SHOW FULL COLUMNS FROM original_mixed;
+SHOW FULL COLUMNS FROM cloned_mixed;
+
+# Test that cloned table works correctly
+INSERT INTO cloned_mixed (name, server_network, host_address, server_mac)
+VALUES (
+    'web-server-01',
+    vsql_network_address.cidr_from_string('10.0.1.0/24'),
+    vsql_network_address.inet_from_string('10.0.1.10'),
+    vsql_network_address.macaddr_from_string('00:1a:2b:3c:4d:5e')
+);
+
+SELECT id, name, vsql_network_address.cidr_to_string(server_network),
+       vsql_network_address.inet_to_string(host_address), vsql_network_address.macaddr_to_string(server_mac)
+FROM cloned_mixed;
+
+########################################################################
+# Cleanup
+########################################################################
+
+DROP TABLE original_network_table, cloned_network_table,
+           original_with_indexes, cloned_with_indexes,
+           original_mixed, cloned_mixed;
+
+# Remove extension from registry
+UNINSTALL EXTENSION vsql_network_address;
