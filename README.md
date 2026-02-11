@@ -60,7 +60,7 @@ A comprehensive network address extension for VillageSQL Server providing Postgr
 
 ## Usage
 
-After installation, the extension provides the following types and functions. Functions can be called with or without the extension prefix.
+After installation, the extension provides the following types and functions.
 
 ### Network Address Types
 

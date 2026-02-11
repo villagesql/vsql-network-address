@@ -1,4 +1,4 @@
-INSTALL EXTENSION 'vsql-network-address';
+INSTALL EXTENSION vsql_network_address;
 DROP TABLE IF EXISTS original_network_table, cloned_network_table,
 original_with_indexes, cloned_with_indexes,
 original_mixed, cloned_mixed;
@@ -13,17 +13,17 @@ CREATE TABLE cloned_network_table LIKE original_network_table;
 SHOW FULL COLUMNS FROM original_network_table;
 Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
 id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
-network	varbinary(21)	NULL	YES		NULL		select,insert,update,references	{VillageSQL: cidr, Version: 00}
-address	varbinary(21)	NULL	NO		NULL		select,insert,update,references	{VillageSQL: inet, Version: 00}
-mac	varbinary(8)	NULL	YES		NULL		select,insert,update,references	{VillageSQL: macaddr, Version: 00}
-mac8	varbinary(10)	NULL	YES		NULL		select,insert,update,references	{VillageSQL: macaddr8, Version: 00}
+network	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,references	
+address	vsql_network_address.INET	NULL	NO		NULL		select,insert,update,references	
+mac	vsql_network_address.MACADDR	NULL	YES		NULL		select,insert,update,references	
+mac8	vsql_network_address.MACADDR8	NULL	YES		NULL		select,insert,update,references	
 SHOW FULL COLUMNS FROM cloned_network_table;
 Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
 id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
-network	varbinary(21)	NULL	YES		NULL		select,insert,update,references	{VillageSQL: cidr, Version: 00}
-address	varbinary(21)	NULL	NO		NULL		select,insert,update,references	{VillageSQL: inet, Version: 00}
-mac	varbinary(8)	NULL	YES		NULL		select,insert,update,references	{VillageSQL: macaddr, Version: 00}
-mac8	varbinary(10)	NULL	YES		NULL		select,insert,update,references	{VillageSQL: macaddr8, Version: 00}
+network	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,references	
+address	vsql_network_address.INET	NULL	NO		NULL		select,insert,update,references	
+mac	vsql_network_address.MACADDR	NULL	YES		NULL		select,insert,update,references	
+mac8	vsql_network_address.MACADDR8	NULL	YES		NULL		select,insert,update,references	
 INSERT INTO original_network_table (network, address, mac, mac8)
 VALUES (
 cidr_from_string('192.168.1.0/24'),
@@ -100,7 +100,7 @@ inet_from_string('192.168.1.6'),
 macaddr_from_string('08:00:2b:01:02:04'),
 macaddr8_from_string('08:00:2b:01:02:03:04:06')
 );
-ERROR 23000: Duplicate entry '' for key 'cloned_with_indexes.unique_network'
+ERROR 23000: Duplicate entry '192.168.1.0/24' for key 'cloned_with_indexes.unique_network'
 CREATE TABLE original_mixed (
 id INT AUTO_INCREMENT PRIMARY KEY,
 name VARCHAR(100) NOT NULL,
@@ -115,17 +115,17 @@ SHOW FULL COLUMNS FROM original_mixed;
 Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
 id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
 name	varchar(100)	utf8mb4_0900_ai_ci	NO	MUL	NULL		select,insert,update,references	
-server_network	varbinary(21)	NULL	YES		NULL		select,insert,update,references	{VillageSQL: cidr, Version: 00}
-host_address	varbinary(21)	NULL	NO		NULL		select,insert,update,references	{VillageSQL: inet, Version: 00}
-server_mac	varbinary(8)	NULL	YES		NULL		select,insert,update,references	{VillageSQL: macaddr, Version: 00}
+server_network	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,references	
+host_address	vsql_network_address.INET	NULL	NO		NULL		select,insert,update,references	
+server_mac	vsql_network_address.MACADDR	NULL	YES		NULL		select,insert,update,references	
 created_at	timestamp	NULL	YES		CURRENT_TIMESTAMP	DEFAULT_GENERATED	select,insert,update,references	
 SHOW FULL COLUMNS FROM cloned_mixed;
 Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
 id	int	NULL	NO	PRI	NULL	auto_increment	select,insert,update,references	
 name	varchar(100)	utf8mb4_0900_ai_ci	NO	MUL	NULL		select,insert,update,references	
-server_network	varbinary(21)	NULL	YES		NULL		select,insert,update,references	{VillageSQL: cidr, Version: 00}
-host_address	varbinary(21)	NULL	NO		NULL		select,insert,update,references	{VillageSQL: inet, Version: 00}
-server_mac	varbinary(8)	NULL	YES		NULL		select,insert,update,references	{VillageSQL: macaddr, Version: 00}
+server_network	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,references	
+host_address	vsql_network_address.INET	NULL	NO		NULL		select,insert,update,references	
+server_mac	vsql_network_address.MACADDR	NULL	YES		NULL		select,insert,update,references	
 created_at	timestamp	NULL	YES		CURRENT_TIMESTAMP	DEFAULT_GENERATED	select,insert,update,references	
 INSERT INTO cloned_mixed (name, server_network, host_address, server_mac)
 VALUES (
@@ -142,36 +142,4 @@ id	name	cidr_to_string(server_network)	inet_to_string(host_address)	macaddr_to_s
 DROP TABLE original_network_table, cloned_network_table,
 original_with_indexes, cloned_with_indexes,
 original_mixed, cloned_mixed;
-#
-# TODO(villagesql): this cleanup shouldn't be necessary once we fix uninstall extension.
-#
-DROP FUNCTION IF EXISTS cidr_to_string;
-DROP FUNCTION IF EXISTS cidr_from_string;
-DROP FUNCTION IF EXISTS cidr_compare;
-DROP FUNCTION IF EXISTS inet_to_string;
-DROP FUNCTION IF EXISTS inet_from_string;
-DROP FUNCTION IF EXISTS inet_compare;
-DROP FUNCTION IF EXISTS macaddr_to_string;
-DROP FUNCTION IF EXISTS macaddr_from_string;
-DROP FUNCTION IF EXISTS macaddr_compare;
-DROP FUNCTION IF EXISTS macaddr8_to_string;
-DROP FUNCTION IF EXISTS macaddr8_from_string;
-DROP FUNCTION IF EXISTS macaddr8_compare;
-DROP FUNCTION IF EXISTS inet_family;
-DROP FUNCTION IF EXISTS inet_masklen;
-DROP FUNCTION IF EXISTS inet_host;
-DROP FUNCTION IF EXISTS inet_text;
-DROP FUNCTION IF EXISTS inet_netmask;
-DROP FUNCTION IF EXISTS inet_hostmask;
-DROP FUNCTION IF EXISTS inet_broadcast;
-DROP FUNCTION IF EXISTS inet_network;
-DROP FUNCTION IF EXISTS inet_set_masklen;
-DROP FUNCTION IF EXISTS cidr_set_masklen;
-DROP FUNCTION IF EXISTS macaddr_trunc;
-DROP FUNCTION IF EXISTS inet_abbrev;
-DROP FUNCTION IF EXISTS cidr_abbrev;
-DROP TYPE IF EXISTS CIDR;
-DROP TYPE IF EXISTS INET;
-DROP TYPE IF EXISTS MACADDR;
-DROP TYPE IF EXISTS MACADDR8;
-UNINSTALL EXTENSION 'vsql-network-address';
+UNINSTALL EXTENSION vsql_network_address;

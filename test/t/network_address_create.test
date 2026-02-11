@@ -1,5 +1,5 @@
 # Setup: Copy VEB to veb_dir if VSQL_NETWORK_ADDRESS_VEB is set, then install extension
---let $veb_dest = `SELECT CONCAT(@@veb_dir, '/vsql_network_address.veb')`
+--let $veb_dest = `SELECT CONCAT(@@veb_dir, '/veb')`
 if ($VSQL_NETWORK_ADDRESS_VEB) {
   --error 0,1
   --remove_file $veb_dest
@@ -145,10 +145,10 @@ CREATE TABLE test_ipv6_support (
 );
 
 INSERT INTO test_ipv6_support (ipv6_network, ipv6_address) VALUES
-    (vsql_network_address.cidr_from_string('2001:db8::/32'), vsql_network_address.inet_from_string('2001:db8::1')),
-    (vsql_network_address.cidr_from_string('fe80::/64'), vsql_network_address.inet_from_string('fe80::1/64'));
+    (cidr_from_string('2001:db8::/32'), inet_from_string('2001:db8::1')),
+    (cidr_from_string('fe80::/64'), inet_from_string('fe80::1/64'));
 
-SELECT id, vsql_network_address.cidr_to_string(ipv6_network), vsql_network_address.inet_to_string(ipv6_address)
+SELECT id, cidr_to_string(ipv6_network), inet_to_string(ipv6_address)
 FROM test_ipv6_support ORDER BY id;
 
 ########################################################################

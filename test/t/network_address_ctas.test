@@ -1,5 +1,5 @@
 # Setup: Copy VEB to veb_dir if VSQL_NETWORK_ADDRESS_VEB is set, then install extension
---let $veb_dest = `SELECT CONCAT(@@veb_dir, '/vsql_network_address.veb')`
+--let $veb_dest = `SELECT CONCAT(@@veb_dir, '/veb')`
 if ($VSQL_NETWORK_ADDRESS_VEB) {
   --error 0,1
   --remove_file $veb_dest
@@ -40,14 +40,14 @@ CREATE TABLE source_table (
 # Insert test data (IPv4 and IPv6)
 INSERT INTO source_table (network, address, mac, mac8)
 VALUES
-    (vsql_network_address.cidr_from_string('192.168.1.0/24'), vsql_network_address.inet_from_string('192.168.1.5'),
-     vsql_network_address.macaddr_from_string('08:00:2b:01:02:03'), vsql_network_address.macaddr8_from_string('08:00:2b:01:02:03:04:05')),
-    (vsql_network_address.cidr_from_string('10.0.0.0/8'), vsql_network_address.inet_from_string('10.0.0.1'),
-     vsql_network_address.macaddr_from_string('aa:bb:cc:dd:ee:ff'), vsql_network_address.macaddr8_from_string('aa:bb:cc:dd:ee:ff:00:11')),
-    (vsql_network_address.cidr_from_string('172.16.0.0/16'), vsql_network_address.inet_from_string('172.16.1.10'),
-     vsql_network_address.macaddr_from_string('11:22:33:44:55:66'), vsql_network_address.macaddr8_from_string('11:22:33:44:55:66:77:88')),
-    (vsql_network_address.cidr_from_string('2001:db8::/32'), vsql_network_address.inet_from_string('2001:db8::1/64'),
-     vsql_network_address.macaddr_from_string('00:11:22:33:44:55'), vsql_network_address.macaddr8_from_string('00:11:22:33:44:55:66:77'));
+    (cidr_from_string('192.168.1.0/24'), inet_from_string('192.168.1.5'),
+     macaddr_from_string('08:00:2b:01:02:03'), macaddr8_from_string('08:00:2b:01:02:03:04:05')),
+    (cidr_from_string('10.0.0.0/8'), inet_from_string('10.0.0.1'),
+     macaddr_from_string('aa:bb:cc:dd:ee:ff'), macaddr8_from_string('aa:bb:cc:dd:ee:ff:00:11')),
+    (cidr_from_string('172.16.0.0/16'), inet_from_string('172.16.1.10'),
+     macaddr_from_string('11:22:33:44:55:66'), macaddr8_from_string('11:22:33:44:55:66:77:88')),
+    (cidr_from_string('2001:db8::/32'), inet_from_string('2001:db8::1/64'),
+     macaddr_from_string('00:11:22:33:44:55'), macaddr8_from_string('00:11:22:33:44:55:66:77'));
 
 # Create table from SELECT
 CREATE TABLE ctas_basic
@@ -57,19 +57,19 @@ SELECT * FROM source_table;
 SHOW FULL COLUMNS FROM ctas_basic;
 
 # Verify data was copied
-SELECT id, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address),
-       vsql_network_address.macaddr_to_string(mac), vsql_network_address.macaddr8_to_string(mac8)
+SELECT id, cidr_to_string(network), inet_to_string(address),
+       macaddr_to_string(mac), macaddr8_to_string(mac8)
 FROM ctas_basic
 ORDER BY id;
 
 # Verify we can insert into the new table
 INSERT INTO ctas_basic (id, network, address, mac, mac8)
 VALUES
-    (4, vsql_network_address.cidr_from_string('192.168.2.0/24'), vsql_network_address.inet_from_string('192.168.2.1'),
-     vsql_network_address.macaddr_from_string('ff:ee:dd:cc:bb:aa'), vsql_network_address.macaddr8_from_string('ff:ee:dd:cc:bb:aa:99:88'));
+    (4, cidr_from_string('192.168.2.0/24'), inet_from_string('192.168.2.1'),
+     macaddr_from_string('ff:ee:dd:cc:bb:aa'), macaddr8_from_string('ff:ee:dd:cc:bb:aa:99:88'));
 
-SELECT id, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address),
-       vsql_network_address.macaddr_to_string(mac), vsql_network_address.macaddr8_to_string(mac8)
+SELECT id, cidr_to_string(network), inet_to_string(address),
+       macaddr_to_string(mac), macaddr8_to_string(mac8)
 FROM ctas_basic
 ORDER BY id;
 
@@ -84,8 +84,8 @@ SELECT * FROM source_table
 WHERE id <= 2;
 
 # Verify only filtered data was copied
-SELECT id, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address),
-       vsql_network_address.macaddr_to_string(mac), vsql_network_address.macaddr8_to_string(mac8)
+SELECT id, cidr_to_string(network), inet_to_string(address),
+       macaddr_to_string(mac), macaddr8_to_string(mac8)
 FROM ctas_filtered
 ORDER BY id;
 
@@ -100,7 +100,7 @@ SELECT id, network, address FROM source_table;
 
 SHOW FULL COLUMNS FROM ctas_selected_columns;
 
-SELECT id, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address)
+SELECT id, cidr_to_string(network), inet_to_string(address)
 FROM ctas_selected_columns
 ORDER BY id;
 
@@ -115,13 +115,13 @@ SELECT
     id,
     network,
     address,
-    CAST(vsql_network_address.inet_to_string(address) AS CHAR(50)) AS address_str,
-    CAST(vsql_network_address.macaddr_to_string(mac) AS CHAR(20)) AS mac_str
+    CAST(inet_to_string(address) AS CHAR(50)) AS address_str,
+    CAST(macaddr_to_string(mac) AS CHAR(20)) AS mac_str
 FROM source_table;
 
 SHOW FULL COLUMNS FROM ctas_computed;
 
-SELECT id, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address), address_str, mac_str
+SELECT id, cidr_to_string(network), inet_to_string(address), address_str, mac_str
 FROM ctas_computed
 ORDER BY id;
 
@@ -153,8 +153,8 @@ INNER JOIN device_info d ON s.id = d.device_id;
 
 SHOW FULL COLUMNS FROM ctas_joined;
 
-SELECT id, device_name, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address),
-       vsql_network_address.macaddr_to_string(mac)
+SELECT id, device_name, cidr_to_string(network), inet_to_string(address),
+       macaddr_to_string(mac)
 FROM ctas_joined
 ORDER BY id;
 
@@ -172,9 +172,9 @@ CREATE TABLE device_networks (
 );
 
 INSERT INTO device_networks VALUES
-    ('router', vsql_network_address.cidr_from_string('10.1.0.0/16'), vsql_network_address.inet_from_string('10.1.0.1')),
-    ('router', vsql_network_address.cidr_from_string('10.2.0.0/16'), vsql_network_address.inet_from_string('10.2.0.1')),
-    ('switch', vsql_network_address.cidr_from_string('10.3.0.0/16'), vsql_network_address.inet_from_string('10.3.0.1'));
+    ('router', cidr_from_string('10.1.0.0/16'), inet_from_string('10.1.0.1')),
+    ('router', cidr_from_string('10.2.0.0/16'), inet_from_string('10.2.0.1')),
+    ('switch', cidr_from_string('10.3.0.0/16'), inet_from_string('10.3.0.1'));
 
 CREATE TABLE ctas_grouped
 SELECT
@@ -204,7 +204,7 @@ FROM source_table;
 
 SHOW FULL COLUMNS FROM ctas_mixed;
 
-SELECT id, device_name, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address)
+SELECT id, device_name, cidr_to_string(network), inet_to_string(address)
 FROM ctas_mixed
 ORDER BY id;
 
@@ -225,8 +225,8 @@ WHERE id = 1;
 
 SHOW FULL COLUMNS FROM ctas_aliases;
 
-SELECT device_id, vsql_network_address.cidr_to_string(subnet), vsql_network_address.inet_to_string(ip_address),
-       vsql_network_address.macaddr_to_string(hw_address)
+SELECT device_id, cidr_to_string(subnet), inet_to_string(ip_address),
+       macaddr_to_string(hw_address)
 FROM ctas_aliases;
 
 ########################################################################
@@ -242,8 +242,8 @@ CREATE TABLE alternate_networks (
 );
 
 INSERT INTO alternate_networks VALUES
-    (100, vsql_network_address.cidr_from_string('192.168.100.0/24'), vsql_network_address.inet_from_string('192.168.100.1')),
-    (101, vsql_network_address.cidr_from_string('192.168.101.0/24'), vsql_network_address.inet_from_string('192.168.101.1'));
+    (100, cidr_from_string('192.168.100.0/24'), inet_from_string('192.168.100.1')),
+    (101, cidr_from_string('192.168.101.0/24'), inet_from_string('192.168.101.1'));
 
 CREATE TABLE ctas_union
 SELECT id, network, address FROM source_table
@@ -252,7 +252,7 @@ SELECT id, network, address FROM alternate_networks;
 
 SHOW FULL COLUMNS FROM ctas_union;
 
-SELECT id, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address)
+SELECT id, cidr_to_string(network), inet_to_string(address)
 FROM ctas_union
 ORDER BY id;
 
