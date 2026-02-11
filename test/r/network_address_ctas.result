@@ -10,14 +10,14 @@ mac8 MACADDR8
 );
 INSERT INTO source_table (network, address, mac, mac8)
 VALUES
-(vsql_network_address.cidr_from_string('192.168.1.0/24'), vsql_network_address.inet_from_string('192.168.1.5'),
-vsql_network_address.macaddr_from_string('08:00:2b:01:02:03'), vsql_network_address.macaddr8_from_string('08:00:2b:01:02:03:04:05')),
-(vsql_network_address.cidr_from_string('10.0.0.0/8'), vsql_network_address.inet_from_string('10.0.0.1'),
-vsql_network_address.macaddr_from_string('aa:bb:cc:dd:ee:ff'), vsql_network_address.macaddr8_from_string('aa:bb:cc:dd:ee:ff:00:11')),
-(vsql_network_address.cidr_from_string('172.16.0.0/16'), vsql_network_address.inet_from_string('172.16.1.10'),
-vsql_network_address.macaddr_from_string('11:22:33:44:55:66'), vsql_network_address.macaddr8_from_string('11:22:33:44:55:66:77:88')),
-(vsql_network_address.cidr_from_string('2001:db8::/32'), vsql_network_address.inet_from_string('2001:db8::1/64'),
-vsql_network_address.macaddr_from_string('00:11:22:33:44:55'), vsql_network_address.macaddr8_from_string('00:11:22:33:44:55:66:77'));
+(cidr_from_string('192.168.1.0/24'), inet_from_string('192.168.1.5'),
+macaddr_from_string('08:00:2b:01:02:03'), macaddr8_from_string('08:00:2b:01:02:03:04:05')),
+(cidr_from_string('10.0.0.0/8'), inet_from_string('10.0.0.1'),
+macaddr_from_string('aa:bb:cc:dd:ee:ff'), macaddr8_from_string('aa:bb:cc:dd:ee:ff:00:11')),
+(cidr_from_string('172.16.0.0/16'), inet_from_string('172.16.1.10'),
+macaddr_from_string('11:22:33:44:55:66'), macaddr8_from_string('11:22:33:44:55:66:77:88')),
+(cidr_from_string('2001:db8::/32'), inet_from_string('2001:db8::1/64'),
+macaddr_from_string('00:11:22:33:44:55'), macaddr8_from_string('00:11:22:33:44:55:66:77'));
 CREATE TABLE ctas_basic
 SELECT * FROM source_table;
 SHOW FULL COLUMNS FROM ctas_basic;
@@ -27,24 +27,24 @@ network	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,reference
 address	vsql_network_address.INET	NULL	NO		NULL		select,insert,update,references	
 mac	vsql_network_address.MACADDR	NULL	YES		NULL		select,insert,update,references	
 mac8	vsql_network_address.MACADDR8	NULL	YES		NULL		select,insert,update,references	
-SELECT id, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address),
-vsql_network_address.macaddr_to_string(mac), vsql_network_address.macaddr8_to_string(mac8)
+SELECT id, cidr_to_string(network), inet_to_string(address),
+macaddr_to_string(mac), macaddr8_to_string(mac8)
 FROM ctas_basic
 ORDER BY id;
-id	vsql_network_address.cidr_to_string(network)	vsql_network_address.inet_to_string(address)	vsql_network_address.macaddr_to_string(mac)	vsql_network_address.macaddr8_to_string(mac8)
+id	cidr_to_string(network)	inet_to_string(address)	macaddr_to_string(mac)	macaddr8_to_string(mac8)
 1	192.168.1.0/24	192.168.1.5	08:00:2b:01:02:03	08:00:2b:01:02:03:04:05
 2	10.0.0.0/8	10.0.0.1	aa:bb:cc:dd:ee:ff	aa:bb:cc:dd:ee:ff:00:11
 3	172.16.0.0/16	172.16.1.10	11:22:33:44:55:66	11:22:33:44:55:66:77:88
 4	2001:0db8:0000:0000:0000:0000:0000:0000/32	2001:0db8:0000:0000:0000:0000:0000:0001/64	00:11:22:33:44:55	00:11:22:33:44:55:66:77
 INSERT INTO ctas_basic (id, network, address, mac, mac8)
 VALUES
-(4, vsql_network_address.cidr_from_string('192.168.2.0/24'), vsql_network_address.inet_from_string('192.168.2.1'),
-vsql_network_address.macaddr_from_string('ff:ee:dd:cc:bb:aa'), vsql_network_address.macaddr8_from_string('ff:ee:dd:cc:bb:aa:99:88'));
-SELECT id, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address),
-vsql_network_address.macaddr_to_string(mac), vsql_network_address.macaddr8_to_string(mac8)
+(4, cidr_from_string('192.168.2.0/24'), inet_from_string('192.168.2.1'),
+macaddr_from_string('ff:ee:dd:cc:bb:aa'), macaddr8_from_string('ff:ee:dd:cc:bb:aa:99:88'));
+SELECT id, cidr_to_string(network), inet_to_string(address),
+macaddr_to_string(mac), macaddr8_to_string(mac8)
 FROM ctas_basic
 ORDER BY id;
-id	vsql_network_address.cidr_to_string(network)	vsql_network_address.inet_to_string(address)	vsql_network_address.macaddr_to_string(mac)	vsql_network_address.macaddr8_to_string(mac8)
+id	cidr_to_string(network)	inet_to_string(address)	macaddr_to_string(mac)	macaddr8_to_string(mac8)
 1	192.168.1.0/24	192.168.1.5	08:00:2b:01:02:03	08:00:2b:01:02:03:04:05
 2	10.0.0.0/8	10.0.0.1	aa:bb:cc:dd:ee:ff	aa:bb:cc:dd:ee:ff:00:11
 3	172.16.0.0/16	172.16.1.10	11:22:33:44:55:66	11:22:33:44:55:66:77:88
@@ -53,11 +53,11 @@ id	vsql_network_address.cidr_to_string(network)	vsql_network_address.inet_to_str
 CREATE TABLE ctas_filtered
 SELECT * FROM source_table
 WHERE id <= 2;
-SELECT id, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address),
-vsql_network_address.macaddr_to_string(mac), vsql_network_address.macaddr8_to_string(mac8)
+SELECT id, cidr_to_string(network), inet_to_string(address),
+macaddr_to_string(mac), macaddr8_to_string(mac8)
 FROM ctas_filtered
 ORDER BY id;
-id	vsql_network_address.cidr_to_string(network)	vsql_network_address.inet_to_string(address)	vsql_network_address.macaddr_to_string(mac)	vsql_network_address.macaddr8_to_string(mac8)
+id	cidr_to_string(network)	inet_to_string(address)	macaddr_to_string(mac)	macaddr8_to_string(mac8)
 1	192.168.1.0/24	192.168.1.5	08:00:2b:01:02:03	08:00:2b:01:02:03:04:05
 2	10.0.0.0/8	10.0.0.1	aa:bb:cc:dd:ee:ff	aa:bb:cc:dd:ee:ff:00:11
 CREATE TABLE ctas_selected_columns
@@ -67,10 +67,10 @@ Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
 id	int	NULL	NO		0		select,insert,update,references	
 network	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,references	
 address	vsql_network_address.INET	NULL	NO		NULL		select,insert,update,references	
-SELECT id, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address)
+SELECT id, cidr_to_string(network), inet_to_string(address)
 FROM ctas_selected_columns
 ORDER BY id;
-id	vsql_network_address.cidr_to_string(network)	vsql_network_address.inet_to_string(address)
+id	cidr_to_string(network)	inet_to_string(address)
 1	192.168.1.0/24	192.168.1.5
 2	10.0.0.0/8	10.0.0.1
 3	172.16.0.0/16	172.16.1.10
@@ -80,8 +80,8 @@ SELECT
 id,
 network,
 address,
-CAST(vsql_network_address.inet_to_string(address) AS CHAR(50)) AS address_str,
-CAST(vsql_network_address.macaddr_to_string(mac) AS CHAR(20)) AS mac_str
+CAST(inet_to_string(address) AS CHAR(50)) AS address_str,
+CAST(macaddr_to_string(mac) AS CHAR(20)) AS mac_str
 FROM source_table;
 SHOW FULL COLUMNS FROM ctas_computed;
 Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
@@ -90,10 +90,10 @@ network	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,reference
 address	vsql_network_address.INET	NULL	NO		NULL		select,insert,update,references	
 address_str	varchar(50)	utf8mb4_0900_ai_ci	YES		NULL		select,insert,update,references	
 mac_str	varchar(20)	utf8mb4_0900_ai_ci	YES		NULL		select,insert,update,references	
-SELECT id, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address), address_str, mac_str
+SELECT id, cidr_to_string(network), inet_to_string(address), address_str, mac_str
 FROM ctas_computed
 ORDER BY id;
-id	vsql_network_address.cidr_to_string(network)	vsql_network_address.inet_to_string(address)	address_str	mac_str
+id	cidr_to_string(network)	inet_to_string(address)	address_str	mac_str
 1	192.168.1.0/24	192.168.1.5	192.168.1.5	08:00:2b:01:02:03
 2	10.0.0.0/8	10.0.0.1	10.0.0.1	aa:bb:cc:dd:ee:ff
 3	172.16.0.0/16	172.16.1.10	172.16.1.10	11:22:33:44:55:66
@@ -122,11 +122,11 @@ device_name	varchar(100)	utf8mb4_0900_ai_ci	YES		NULL		select,insert,update,refe
 network	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,references	
 address	vsql_network_address.INET	NULL	NO		NULL		select,insert,update,references	
 mac	vsql_network_address.MACADDR	NULL	YES		NULL		select,insert,update,references	
-SELECT id, device_name, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address),
-vsql_network_address.macaddr_to_string(mac)
+SELECT id, device_name, cidr_to_string(network), inet_to_string(address),
+macaddr_to_string(mac)
 FROM ctas_joined
 ORDER BY id;
-id	device_name	vsql_network_address.cidr_to_string(network)	vsql_network_address.inet_to_string(address)	vsql_network_address.macaddr_to_string(mac)
+id	device_name	cidr_to_string(network)	inet_to_string(address)	macaddr_to_string(mac)
 1	router-01	192.168.1.0/24	192.168.1.5	08:00:2b:01:02:03
 2	switch-01	10.0.0.0/8	10.0.0.1	aa:bb:cc:dd:ee:ff
 3	firewall-01	172.16.0.0/16	172.16.1.10	11:22:33:44:55:66
@@ -136,9 +136,9 @@ network CIDR,
 address INET
 );
 INSERT INTO device_networks VALUES
-('router', vsql_network_address.cidr_from_string('10.1.0.0/16'), vsql_network_address.inet_from_string('10.1.0.1')),
-('router', vsql_network_address.cidr_from_string('10.2.0.0/16'), vsql_network_address.inet_from_string('10.2.0.1')),
-('switch', vsql_network_address.cidr_from_string('10.3.0.0/16'), vsql_network_address.inet_from_string('10.3.0.1'));
+('router', cidr_from_string('10.1.0.0/16'), inet_from_string('10.1.0.1')),
+('router', cidr_from_string('10.2.0.0/16'), inet_from_string('10.2.0.1')),
+('switch', cidr_from_string('10.3.0.0/16'), inet_from_string('10.3.0.1'));
 CREATE TABLE ctas_grouped
 SELECT
 device_type,
@@ -168,10 +168,10 @@ device_name	varchar(10)	utf8mb4_0900_ai_ci	YES		NULL		select,insert,update,refer
 network	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,references	
 address	vsql_network_address.INET	NULL	NO		NULL		select,insert,update,references	
 created_at	datetime	NULL	NO		NULL		select,insert,update,references	
-SELECT id, device_name, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address)
+SELECT id, device_name, cidr_to_string(network), inet_to_string(address)
 FROM ctas_mixed
 ORDER BY id;
-id	device_name	vsql_network_address.cidr_to_string(network)	vsql_network_address.inet_to_string(address)
+id	device_name	cidr_to_string(network)	inet_to_string(address)
 1	Device-001	192.168.1.0/24	192.168.1.5
 2	Device-002	10.0.0.0/8	10.0.0.1
 3	Device-003	172.16.0.0/16	172.16.1.10
@@ -190,10 +190,10 @@ device_id	int	NULL	NO		0		select,insert,update,references
 subnet	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,references	
 ip_address	vsql_network_address.INET	NULL	NO		NULL		select,insert,update,references	
 hw_address	vsql_network_address.MACADDR	NULL	YES		NULL		select,insert,update,references	
-SELECT device_id, vsql_network_address.cidr_to_string(subnet), vsql_network_address.inet_to_string(ip_address),
-vsql_network_address.macaddr_to_string(hw_address)
+SELECT device_id, cidr_to_string(subnet), inet_to_string(ip_address),
+macaddr_to_string(hw_address)
 FROM ctas_aliases;
-device_id	vsql_network_address.cidr_to_string(subnet)	vsql_network_address.inet_to_string(ip_address)	vsql_network_address.macaddr_to_string(hw_address)
+device_id	cidr_to_string(subnet)	inet_to_string(ip_address)	macaddr_to_string(hw_address)
 1	192.168.1.0/24	192.168.1.5	08:00:2b:01:02:03
 CREATE TABLE alternate_networks (
 id INT,
@@ -201,8 +201,8 @@ network CIDR,
 address INET
 );
 INSERT INTO alternate_networks VALUES
-(100, vsql_network_address.cidr_from_string('192.168.100.0/24'), vsql_network_address.inet_from_string('192.168.100.1')),
-(101, vsql_network_address.cidr_from_string('192.168.101.0/24'), vsql_network_address.inet_from_string('192.168.101.1'));
+(100, cidr_from_string('192.168.100.0/24'), inet_from_string('192.168.100.1')),
+(101, cidr_from_string('192.168.101.0/24'), inet_from_string('192.168.101.1'));
 CREATE TABLE ctas_union
 SELECT id, network, address FROM source_table
 UNION
@@ -212,10 +212,10 @@ Field	Type	Collation	Null	Key	Default	Extra	Privileges	Comment
 id	int	NULL	YES		NULL		select,insert,update,references	
 network	vsql_network_address.CIDR	NULL	YES		NULL		select,insert,update,references	
 address	vsql_network_address.INET	NULL	YES		NULL		select,insert,update,references	
-SELECT id, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address)
+SELECT id, cidr_to_string(network), inet_to_string(address)
 FROM ctas_union
 ORDER BY id;
-id	vsql_network_address.cidr_to_string(network)	vsql_network_address.inet_to_string(address)
+id	cidr_to_string(network)	inet_to_string(address)
 1	192.168.1.0/24	192.168.1.5
 2	10.0.0.0/8	10.0.0.1
 3	172.16.0.0/16	172.16.1.10

@@ -110,11 +110,11 @@ ipv6_network CIDR,
 ipv6_address INET NOT NULL
 );
 INSERT INTO test_ipv6_support (ipv6_network, ipv6_address) VALUES
-(vsql_network_address.cidr_from_string('2001:db8::/32'), vsql_network_address.inet_from_string('2001:db8::1')),
-(vsql_network_address.cidr_from_string('fe80::/64'), vsql_network_address.inet_from_string('fe80::1/64'));
-SELECT id, vsql_network_address.cidr_to_string(ipv6_network), vsql_network_address.inet_to_string(ipv6_address)
+(cidr_from_string('2001:db8::/32'), inet_from_string('2001:db8::1')),
+(cidr_from_string('fe80::/64'), inet_from_string('fe80::1/64'));
+SELECT id, cidr_to_string(ipv6_network), inet_to_string(ipv6_address)
 FROM test_ipv6_support ORDER BY id;
-id	vsql_network_address.cidr_to_string(ipv6_network)	vsql_network_address.inet_to_string(ipv6_address)
+id	cidr_to_string(ipv6_network)	inet_to_string(ipv6_address)
 1	2001:0db8:0000:0000:0000:0000:0000:0000/32	2001:0db8:0000:0000:0000:0000:0000:0001
 2	fe80:0000:0000:0000:0000:0000:0000:0000/64	fe80:0000:0000:0000:0000:0000:0000:0001/64
 DROP TABLE test_cidr_basic, test_inet_basic, test_macaddr_basic, test_macaddr8_basic,

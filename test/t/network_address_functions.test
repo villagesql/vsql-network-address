@@ -1,5 +1,5 @@
 # Setup: Copy VEB to veb_dir if VSQL_NETWORK_ADDRESS_VEB is set, then install extension
---let $veb_dest = `SELECT CONCAT(@@veb_dir, '/vsql_network_address.veb')`
+--let $veb_dest = `SELECT CONCAT(@@veb_dir, '/veb')`
 if ($VSQL_NETWORK_ADDRESS_VEB) {
   --error 0,1
   --remove_file $veb_dest
@@ -36,18 +36,18 @@ CREATE TABLE test_functions (
 
 # Insert test data - IPv4
 INSERT INTO test_functions (id, inet_addr, cidr_addr, mac_addr, description) VALUES
-(1, vsql_network_address.inet_from_string('192.168.1.5/24'), vsql_network_address.cidr_from_string('192.168.1.0/24'), vsql_network_address.macaddr_from_string('08:00:2b:01:02:03'), 'Class C network'),
-(2, vsql_network_address.inet_from_string('10.0.0.1/8'), vsql_network_address.cidr_from_string('10.0.0.0/8'), vsql_network_address.macaddr_from_string('12:34:56:78:9a:bc'), 'Class A network'),
-(3, vsql_network_address.inet_from_string('172.16.1.100/16'), vsql_network_address.cidr_from_string('172.16.0.0/16'), vsql_network_address.macaddr_from_string('aa:bb:cc:dd:ee:ff'), 'Class B network'),
-(4, vsql_network_address.inet_from_string('192.168.23.20/30'), vsql_network_address.cidr_from_string('192.168.23.20/30'), vsql_network_address.macaddr_from_string('00:00:00:00:00:00'), 'Small subnet'),
-(5, vsql_network_address.inet_from_string('203.0.113.50/32'), vsql_network_address.cidr_from_string('203.0.113.50/32'), vsql_network_address.macaddr_from_string('ff:ff:ff:ff:ff:ff'), 'Single host');
+(1, inet_from_string('192.168.1.5/24'), cidr_from_string('192.168.1.0/24'), macaddr_from_string('08:00:2b:01:02:03'), 'Class C network'),
+(2, inet_from_string('10.0.0.1/8'), cidr_from_string('10.0.0.0/8'), macaddr_from_string('12:34:56:78:9a:bc'), 'Class A network'),
+(3, inet_from_string('172.16.1.100/16'), cidr_from_string('172.16.0.0/16'), macaddr_from_string('aa:bb:cc:dd:ee:ff'), 'Class B network'),
+(4, inet_from_string('192.168.23.20/30'), cidr_from_string('192.168.23.20/30'), macaddr_from_string('00:00:00:00:00:00'), 'Small subnet'),
+(5, inet_from_string('203.0.113.50/32'), cidr_from_string('203.0.113.50/32'), macaddr_from_string('ff:ff:ff:ff:ff:ff'), 'Single host');
 
 # Insert test data - IPv6
 INSERT INTO test_functions (id, inet_addr, cidr_addr, mac_addr, description) VALUES
-(6, vsql_network_address.inet_from_string('2001:db8::1/64'), vsql_network_address.cidr_from_string('2001:db8::/64'), vsql_network_address.macaddr_from_string('08:00:2b:01:02:03'), 'IPv6 /64 network'),
-(7, vsql_network_address.inet_from_string('fe80::1/10'), vsql_network_address.cidr_from_string('fe80::/10'), vsql_network_address.macaddr_from_string('12:34:56:78:9a:bc'), 'IPv6 link-local'),
-(8, vsql_network_address.inet_from_string('2001:db8:85a3::8a2e:370:7334/48'), vsql_network_address.cidr_from_string('2001:db8:85a3::/48'), vsql_network_address.macaddr_from_string('aa:bb:cc:dd:ee:ff'), 'IPv6 /48 network'),
-(9, vsql_network_address.inet_from_string('::1/128'), vsql_network_address.cidr_from_string('::1/128'), vsql_network_address.macaddr_from_string('00:00:00:00:00:00'), 'IPv6 loopback');
+(6, inet_from_string('2001:db8::1/64'), cidr_from_string('2001:db8::/64'), macaddr_from_string('08:00:2b:01:02:03'), 'IPv6 /64 network'),
+(7, inet_from_string('fe80::1/10'), cidr_from_string('fe80::/10'), macaddr_from_string('12:34:56:78:9a:bc'), 'IPv6 link-local'),
+(8, inet_from_string('2001:db8:85a3::8a2e:370:7334/48'), cidr_from_string('2001:db8:85a3::/48'), macaddr_from_string('aa:bb:cc:dd:ee:ff'), 'IPv6 /48 network'),
+(9, inet_from_string('::1/128'), cidr_from_string('::1/128'), macaddr_from_string('00:00:00:00:00:00'), 'IPv6 loopback');
 
 ########################################################################
 #
@@ -56,19 +56,19 @@ INSERT INTO test_functions (id, inet_addr, cidr_addr, mac_addr, description) VAL
 ########################################################################
 
 --echo # Test inet_family - extract address family
-SELECT id, description, vsql_network_address.inet_family(inet_addr) AS family
+SELECT id, description, inet_family(inet_addr) AS family
 FROM test_functions ORDER BY id;
 
 --echo # Test inet_masklen - extract netmask length
-SELECT id, description, vsql_network_address.inet_masklen(inet_addr) AS masklen
+SELECT id, description, inet_masklen(inet_addr) AS masklen
 FROM test_functions ORDER BY id;
 
 --echo # Test inet_host - extract IP address without netmask
-SELECT id, description, vsql_network_address.inet_host(inet_addr) AS host
+SELECT id, description, inet_host(inet_addr) AS host
 FROM test_functions ORDER BY id;
 
 --echo # Test inet_text - extract IP address with netmask
-SELECT id, description, vsql_network_address.inet_text(inet_addr) AS text
+SELECT id, description, inet_text(inet_addr) AS text
 FROM test_functions ORDER BY id;
 
 ########################################################################
@@ -79,26 +79,26 @@ FROM test_functions ORDER BY id;
 
 --echo # Test inet_netmask - construct netmask for network
 SELECT id, description,
-       vsql_network_address.inet_text(inet_addr) AS address,
-       vsql_network_address.inet_to_string(vsql_network_address.inet_netmask(inet_addr)) AS netmask
+       inet_text(inet_addr) AS address,
+       inet_to_string(inet_netmask(inet_addr)) AS netmask
 FROM test_functions ORDER BY id;
 
 --echo # Test inet_hostmask - construct host mask (inverse of netmask)
 SELECT id, description,
-       vsql_network_address.inet_text(inet_addr) AS address,
-       vsql_network_address.inet_to_string(vsql_network_address.inet_hostmask(inet_addr)) AS hostmask
+       inet_text(inet_addr) AS address,
+       inet_to_string(inet_hostmask(inet_addr)) AS hostmask
 FROM test_functions ORDER BY id;
 
 --echo # Test inet_broadcast - calculate broadcast address
 SELECT id, description,
-       vsql_network_address.inet_text(inet_addr) AS address,
-       vsql_network_address.inet_to_string(vsql_network_address.inet_broadcast(inet_addr)) AS broadcast
+       inet_text(inet_addr) AS address,
+       inet_to_string(inet_broadcast(inet_addr)) AS broadcast
 FROM test_functions ORDER BY id;
 
 --echo # Test inet_network - extract network address
 SELECT id, description,
-       vsql_network_address.inet_text(inet_addr) AS address,
-       vsql_network_address.cidr_to_string(vsql_network_address.inet_network(inet_addr)) AS network
+       inet_text(inet_addr) AS address,
+       cidr_to_string(inet_network(inet_addr)) AS network
 FROM test_functions ORDER BY id;
 
 
@@ -110,14 +110,14 @@ FROM test_functions ORDER BY id;
 
 --echo # Test inet_abbrev - omit /32 for single hosts
 SELECT id, description,
-       vsql_network_address.inet_text(inet_addr) AS full_format,
-       vsql_network_address.inet_abbrev(inet_addr) AS abbreviated
+       inet_text(inet_addr) AS full_format,
+       inet_abbrev(inet_addr) AS abbreviated
 FROM test_functions ORDER BY id;
 
 --echo # Test cidr_abbrev - show minimal significant octets
 SELECT id, description,
-       vsql_network_address.cidr_to_string(cidr_addr) AS full_format,
-       vsql_network_address.cidr_abbrev(cidr_addr) AS abbreviated
+       cidr_to_string(cidr_addr) AS full_format,
+       cidr_abbrev(cidr_addr) AS abbreviated
 FROM test_functions ORDER BY id;
 
 ########################################################################
@@ -128,14 +128,14 @@ FROM test_functions ORDER BY id;
 
 --echo # Test all functions together on sample data
 SELECT
-       vsql_network_address.inet_family(vsql_network_address.inet_from_string('192.168.1.5/24')) AS family,
-       vsql_network_address.inet_masklen(vsql_network_address.inet_from_string('192.168.1.5/24')) AS masklen,
-       vsql_network_address.inet_host(vsql_network_address.inet_from_string('192.168.1.5/24')) AS host,
-       vsql_network_address.inet_text(vsql_network_address.inet_from_string('192.168.1.5/24')) AS text,
-       vsql_network_address.inet_to_string(vsql_network_address.inet_netmask(vsql_network_address.inet_from_string('192.168.1.5/24'))) AS netmask,
-       vsql_network_address.inet_to_string(vsql_network_address.inet_hostmask(vsql_network_address.inet_from_string('192.168.1.5/24'))) AS hostmask,
-       vsql_network_address.inet_to_string(vsql_network_address.inet_broadcast(vsql_network_address.inet_from_string('192.168.1.5/24'))) AS broadcast,
-       vsql_network_address.cidr_to_string(vsql_network_address.inet_network(vsql_network_address.inet_from_string('192.168.1.5/24'))) AS network;
+       inet_family(inet_from_string('192.168.1.5/24')) AS family,
+       inet_masklen(inet_from_string('192.168.1.5/24')) AS masklen,
+       inet_host(inet_from_string('192.168.1.5/24')) AS host,
+       inet_text(inet_from_string('192.168.1.5/24')) AS text,
+       inet_to_string(inet_netmask(inet_from_string('192.168.1.5/24'))) AS netmask,
+       inet_to_string(inet_hostmask(inet_from_string('192.168.1.5/24'))) AS hostmask,
+       inet_to_string(inet_broadcast(inet_from_string('192.168.1.5/24'))) AS broadcast,
+       cidr_to_string(inet_network(inet_from_string('192.168.1.5/24'))) AS network;
 
 ########################################################################
 #
@@ -145,14 +145,14 @@ SELECT
 
 --echo # Test edge cases - /0 and /32
 SELECT
-    vsql_network_address.inet_to_string(vsql_network_address.inet_set_masklen(vsql_network_address.inet_from_string('192.168.1.5/24'), 0)) AS masklen_0,
-    vsql_network_address.inet_to_string(vsql_network_address.inet_set_masklen(vsql_network_address.inet_from_string('192.168.1.5/24'), 32)) AS masklen_32;
+    inet_to_string(inet_set_masklen(inet_from_string('192.168.1.5/24'), 0)) AS masklen_0,
+    inet_to_string(inet_set_masklen(inet_from_string('192.168.1.5/24'), 32)) AS masklen_32;
 
 --echo # Test abbreviation edge cases
 SELECT
-    vsql_network_address.cidr_abbrev(vsql_network_address.cidr_from_string('0.0.0.0/0')) AS slash_0,
-    vsql_network_address.cidr_abbrev(vsql_network_address.cidr_from_string('10.0.0.0/8')) AS slash_8,
-    vsql_network_address.cidr_abbrev(vsql_network_address.cidr_from_string('192.168.0.0/16')) AS slash_16;
+    cidr_abbrev(cidr_from_string('0.0.0.0/0')) AS slash_0,
+    cidr_abbrev(cidr_from_string('10.0.0.0/8')) AS slash_8,
+    cidr_abbrev(cidr_from_string('192.168.0.0/16')) AS slash_16;
 
 ########################################################################
 #
@@ -162,27 +162,27 @@ SELECT
 
 --echo # inet_compare returns ordering semantics (-1, 0, 1)
 SELECT
-    vsql_network_address.inet_compare(vsql_network_address.inet_from_string('10.0.0.1'), vsql_network_address.inet_from_string('10.0.0.2')) AS inet_lt,
-    vsql_network_address.inet_compare(vsql_network_address.inet_from_string('10.0.0.1'), vsql_network_address.inet_from_string('10.0.0.1')) AS inet_eq,
-    vsql_network_address.inet_compare(vsql_network_address.inet_from_string('10.0.0.2'), vsql_network_address.inet_from_string('10.0.0.1')) AS inet_gt;
+    inet_compare(inet_from_string('10.0.0.1'), inet_from_string('10.0.0.2')) AS inet_lt,
+    inet_compare(inet_from_string('10.0.0.1'), inet_from_string('10.0.0.1')) AS inet_eq,
+    inet_compare(inet_from_string('10.0.0.2'), inet_from_string('10.0.0.1')) AS inet_gt;
 
 --echo # cidr_compare matches INET ordering rules
 SELECT
-    vsql_network_address.cidr_compare(vsql_network_address.cidr_from_string('10.0.0.0/8'), vsql_network_address.cidr_from_string('10.0.0.0/16')) AS cidr_lt,
-    vsql_network_address.cidr_compare(vsql_network_address.cidr_from_string('10.0.0.0/8'), vsql_network_address.cidr_from_string('10.0.0.0/8')) AS cidr_eq,
-    vsql_network_address.cidr_compare(vsql_network_address.cidr_from_string('10.0.0.0/16'), vsql_network_address.cidr_from_string('10.0.0.0/8')) AS cidr_gt;
+    cidr_compare(cidr_from_string('10.0.0.0/8'), cidr_from_string('10.0.0.0/16')) AS cidr_lt,
+    cidr_compare(cidr_from_string('10.0.0.0/8'), cidr_from_string('10.0.0.0/8')) AS cidr_eq,
+    cidr_compare(cidr_from_string('10.0.0.0/16'), cidr_from_string('10.0.0.0/8')) AS cidr_gt;
 
 --echo # macaddr_compare sorts lexicographically by bytes
 SELECT
-    vsql_network_address.macaddr_compare(vsql_network_address.macaddr_from_string('00:00:00:00:00:00'), vsql_network_address.macaddr_from_string('00:00:00:00:00:01')) AS mac_lt,
-    vsql_network_address.macaddr_compare(vsql_network_address.macaddr_from_string('00:00:00:00:00:01'), vsql_network_address.macaddr_from_string('00:00:00:00:00:01')) AS mac_eq,
-    vsql_network_address.macaddr_compare(vsql_network_address.macaddr_from_string('ff:ff:ff:ff:ff:ff'), vsql_network_address.macaddr_from_string('00:00:00:00:00:01')) AS mac_gt;
+    macaddr_compare(macaddr_from_string('00:00:00:00:00:00'), macaddr_from_string('00:00:00:00:00:01')) AS mac_lt,
+    macaddr_compare(macaddr_from_string('00:00:00:00:00:01'), macaddr_from_string('00:00:00:00:00:01')) AS mac_eq,
+    macaddr_compare(macaddr_from_string('ff:ff:ff:ff:ff:ff'), macaddr_from_string('00:00:00:00:00:01')) AS mac_gt;
 
 --echo # macaddr8_compare mirrors macaddr behavior for 8-byte addresses
 SELECT
-    vsql_network_address.macaddr8_compare(vsql_network_address.macaddr8_from_string('00:00:00:00:00:00:00:00'), vsql_network_address.macaddr8_from_string('00:00:00:00:00:00:00:01')) AS mac8_lt,
-    vsql_network_address.macaddr8_compare(vsql_network_address.macaddr8_from_string('00:00:00:00:00:00:00:01'), vsql_network_address.macaddr8_from_string('00:00:00:00:00:00:00:01')) AS mac8_eq,
-    vsql_network_address.macaddr8_compare(vsql_network_address.macaddr8_from_string('ff:ff:ff:ff:ff:ff:ff:ff'), vsql_network_address.macaddr8_from_string('00:00:00:00:00:00:00:01')) AS mac8_gt;
+    macaddr8_compare(macaddr8_from_string('00:00:00:00:00:00:00:00'), macaddr8_from_string('00:00:00:00:00:00:00:01')) AS mac8_lt,
+    macaddr8_compare(macaddr8_from_string('00:00:00:00:00:00:00:01'), macaddr8_from_string('00:00:00:00:00:00:00:01')) AS mac8_eq,
+    macaddr8_compare(macaddr8_from_string('ff:ff:ff:ff:ff:ff:ff:ff'), macaddr8_from_string('00:00:00:00:00:00:00:01')) AS mac8_gt;
 
 ########################################################################
 # Cleanup

@@ -1,5 +1,5 @@
 # Setup: Copy VEB to veb_dir if VSQL_NETWORK_ADDRESS_VEB is set, then install extension
---let $veb_dest = `SELECT CONCAT(@@veb_dir, '/vsql_network_address.veb')`
+--let $veb_dest = `SELECT CONCAT(@@veb_dir, '/veb')`
 if ($VSQL_NETWORK_ADDRESS_VEB) {
   --error 0,1
   --remove_file $veb_dest
@@ -39,21 +39,21 @@ SHOW FULL COLUMNS FROM test_alter_add;
 INSERT INTO test_alter_add (name, network, address, mac, mac8)
 VALUES (
     'server-01',
-    vsql_network_address.cidr_from_string('192.168.1.0/24'),
-    vsql_network_address.inet_from_string('192.168.1.5'),
-    vsql_network_address.macaddr_from_string('08:00:2b:01:02:03'),
-    vsql_network_address.macaddr8_from_string('08:00:2b:01:02:03:04:05')
+    cidr_from_string('192.168.1.0/24'),
+    inet_from_string('192.168.1.5'),
+    macaddr_from_string('08:00:2b:01:02:03'),
+    macaddr8_from_string('08:00:2b:01:02:03:04:05')
 ),
 (
     'server-02-ipv6',
-    vsql_network_address.cidr_from_string('2001:db8::/32'),
-    vsql_network_address.inet_from_string('2001:db8::1/64'),
-    vsql_network_address.macaddr_from_string('aa:bb:cc:dd:ee:ff'),
-    vsql_network_address.macaddr8_from_string('aa:bb:cc:dd:ee:ff:11:22')
+    cidr_from_string('2001:db8::/32'),
+    inet_from_string('2001:db8::1/64'),
+    macaddr_from_string('aa:bb:cc:dd:ee:ff'),
+    macaddr8_from_string('aa:bb:cc:dd:ee:ff:11:22')
 );
 
-SELECT id, name, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address),
-       vsql_network_address.macaddr_to_string(mac), vsql_network_address.macaddr8_to_string(mac8)
+SELECT id, name, cidr_to_string(network), inet_to_string(address),
+       macaddr_to_string(mac), macaddr8_to_string(mac8)
 FROM test_alter_add;
 
 ########################################################################
@@ -75,17 +75,17 @@ CREATE TABLE test_alter_drop (
 INSERT INTO test_alter_drop (name, network, address, mac, mac8)
 VALUES (
     'test-data',
-    vsql_network_address.cidr_from_string('10.0.0.0/8'),
-    vsql_network_address.inet_from_string('10.0.0.1'),
-    vsql_network_address.macaddr_from_string('aa:bb:cc:dd:ee:ff'),
-    vsql_network_address.macaddr8_from_string('aa:bb:cc:dd:ee:ff:00:11')
+    cidr_from_string('10.0.0.0/8'),
+    inet_from_string('10.0.0.1'),
+    macaddr_from_string('aa:bb:cc:dd:ee:ff'),
+    macaddr8_from_string('aa:bb:cc:dd:ee:ff:00:11')
 ),
 (
     'test-data-ipv6',
-    vsql_network_address.cidr_from_string('fe80::/64'),
-    vsql_network_address.inet_from_string('fe80::1'),
-    vsql_network_address.macaddr_from_string('11:22:33:44:55:66'),
-    vsql_network_address.macaddr8_from_string('11:22:33:44:55:66:77:88')
+    cidr_from_string('fe80::/64'),
+    inet_from_string('fe80::1'),
+    macaddr_from_string('11:22:33:44:55:66'),
+    macaddr8_from_string('11:22:33:44:55:66:77:88')
 );
 
 # Drop MACADDR8 column
@@ -93,8 +93,8 @@ ALTER TABLE test_alter_drop DROP COLUMN mac8;
 SHOW FULL COLUMNS FROM test_alter_drop;
 
 # Verify data still exists
-SELECT id, name, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address),
-       vsql_network_address.macaddr_to_string(mac)
+SELECT id, name, cidr_to_string(network), inet_to_string(address),
+       macaddr_to_string(mac)
 FROM test_alter_drop;
 
 # Drop MACADDR column
@@ -124,12 +124,12 @@ CREATE TABLE test_alter_modify (
 # Insert test data (IPv4 and IPv6)
 INSERT INTO test_alter_modify (network, address)
 VALUES (
-    vsql_network_address.cidr_from_string('192.168.1.0/24'),
-    vsql_network_address.inet_from_string('192.168.1.5')
+    cidr_from_string('192.168.1.0/24'),
+    inet_from_string('192.168.1.5')
 ),
 (
-    vsql_network_address.cidr_from_string('2001:db8::/48'),
-    vsql_network_address.inet_from_string('2001:db8::100/64')
+    cidr_from_string('2001:db8::/48'),
+    inet_from_string('2001:db8::100/64')
 );
 
 # Modify CIDR column to add NOT NULL constraint
@@ -137,13 +137,13 @@ ALTER TABLE test_alter_modify MODIFY COLUMN network CIDR NOT NULL;
 SHOW FULL COLUMNS FROM test_alter_modify;
 
 # Verify data still works
-SELECT id, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address)
+SELECT id, cidr_to_string(network), inet_to_string(address)
 FROM test_alter_modify;
 
 # Try to insert NULL - should fail
 --error ER_BAD_NULL_ERROR
 INSERT INTO test_alter_modify (network, address)
-VALUES (NULL, vsql_network_address.inet_from_string('10.0.0.1'));
+VALUES (NULL, inet_from_string('10.0.0.1'));
 
 ########################################################################
 #
@@ -161,9 +161,9 @@ CREATE TABLE test_alter_change (
 # Insert test data
 INSERT INTO test_alter_change (old_network, old_address, old_mac)
 VALUES (
-    vsql_network_address.cidr_from_string('172.16.0.0/16'),
-    vsql_network_address.inet_from_string('172.16.1.10'),
-    vsql_network_address.macaddr_from_string('11:22:33:44:55:66')
+    cidr_from_string('172.16.0.0/16'),
+    inet_from_string('172.16.1.10'),
+    macaddr_from_string('11:22:33:44:55:66')
 );
 
 # Rename CIDR column
@@ -179,8 +179,8 @@ ALTER TABLE test_alter_change CHANGE COLUMN old_mac new_mac MACADDR;
 SHOW FULL COLUMNS FROM test_alter_change;
 
 # Verify data with new column names
-SELECT id, vsql_network_address.cidr_to_string(new_network), vsql_network_address.inet_to_string(new_address),
-       vsql_network_address.macaddr_to_string(new_mac)
+SELECT id, cidr_to_string(new_network), inet_to_string(new_address),
+       macaddr_to_string(new_mac)
 FROM test_alter_change;
 
 ########################################################################
@@ -229,9 +229,9 @@ SHOW FULL COLUMNS FROM test_alter_mixed;
 INSERT INTO test_alter_mixed (name, network, address, mac)
 VALUES (
     'multi-change',
-    vsql_network_address.cidr_from_string('10.10.0.0/16'),
-    vsql_network_address.inet_from_string('10.10.1.1'),
-    vsql_network_address.macaddr_from_string('aa:bb:cc:11:22:33')
+    cidr_from_string('10.10.0.0/16'),
+    inet_from_string('10.10.1.1'),
+    macaddr_from_string('aa:bb:cc:11:22:33')
 );
 
 # Multiple modifications in one statement
@@ -243,7 +243,7 @@ ALTER TABLE test_alter_mixed
 SHOW FULL COLUMNS FROM test_alter_mixed;
 
 # Verify data
-SELECT id, name, vsql_network_address.cidr_to_string(network), vsql_network_address.inet_to_string(address)
+SELECT id, name, cidr_to_string(network), inet_to_string(address)
 FROM test_alter_mixed;
 
 ########################################################################

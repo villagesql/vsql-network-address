@@ -703,9 +703,6 @@ int cmp_macaddr8(const unsigned char *data1, size_t len1, const unsigned char *d
   return (result < 0) ? -1 : 1;
 }
 
-// Note: install_extension() is not used for standalone VEF extensions
-// Type registration is handled via CREATE TYPE statements in install.sql
-
 // ============================================================================
 // Helper functions for mask calculations
 // ============================================================================
