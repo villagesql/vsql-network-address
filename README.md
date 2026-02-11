@@ -24,6 +24,8 @@ A comprehensive network address extension for VillageSQL Server providing Postgr
 - C++17 compatible compiler
 - OpenSSL development libraries
 
+📚 **Full Documentation**: Visit [villagesql.com/docs](https://villagesql.com/docs) for comprehensive guides on building extensions, architecture details, and more.
+
 #### Build Instructions
 1. Clone the repository:
    ```bash
@@ -32,11 +34,21 @@ A comprehensive network address extension for VillageSQL Server providing Postgr
    ```
 
 2. Create build directory and build the extension:
+
+   **Linux:**
    ```bash
    mkdir -p build
    cd build
-   cmake .. -DVillageSQL_BUILD_DIR=/path/to/villagesql/build
-   make
+   cmake .. -DVillageSQL_BUILD_DIR=$HOME/build/villagesql
+   make -j $(($(getconf _NPROCESSORS_ONLN) - 2))
+   ```
+
+   **macOS:**
+   ```bash
+   mkdir -p build
+   cd build
+   cmake .. -DVillageSQL_BUILD_DIR=~/build/villagesql
+   make -j $(($(getconf _NPROCESSORS_ONLN) - 2))
    ```
 
    This will create the `vsql-network-address.veb` package in the build directory and automatically configure the VEB install directory to point to VillageSQL's `veb_output_directory`.
@@ -48,7 +60,7 @@ A comprehensive network address extension for VillageSQL Server providing Postgr
 
 ## Usage
 
-After installation, the extension provides the following types and functions:
+After installation, the extension provides the following types and functions. Functions can be called with or without the extension prefix.
 
 ### Network Address Types
 
@@ -264,8 +276,15 @@ The extension includes a comprehensive test suite using the MySQL Test Runner (M
 
 This method assumes you have successfully run `make install` to install the VEB to your veb_dir:
 
+**Linux:**
 ```bash
-cd /path/to/mysql-test
+cd $HOME/build/villagesql/mysql-test
+perl mysql-test-run.pl --suite=/path/to/vsql-network-address/test
+```
+
+**macOS:**
+```bash
+cd ~/build/villagesql/mysql-test
 perl mysql-test-run.pl --suite=/path/to/vsql-network-address/test
 ```
 
@@ -273,8 +292,16 @@ perl mysql-test-run.pl --suite=/path/to/vsql-network-address/test
 
 Use this to test a specific VEB build without installing it first:
 
+**Linux:**
 ```bash
-cd /path/to/mysql-test
+cd $HOME/build/villagesql/mysql-test
+VSQL_NETWORK_ADDRESS_VEB=/path/to/vsql-network-address/build/vsql-network-address.veb \
+  perl mysql-test-run.pl --suite=/path/to/vsql-network-address/test
+```
+
+**macOS:**
+```bash
+cd ~/build/villagesql/mysql-test
 VSQL_NETWORK_ADDRESS_VEB=/path/to/vsql-network-address/build/vsql-network-address.veb \
   perl mysql-test-run.pl --suite=/path/to/vsql-network-address/test
 ```
@@ -326,16 +353,35 @@ License information can be found in the [LICENSE](./LICENSE) file.
 VillageSQL welcomes contributions from the community. Please ensure all tests pass before submitting pull requests:
 
 1. Build the extension:
+
+   **Linux:**
    ```bash
    mkdir -p build && cd build
-   cmake .. -DVillageSQL_BUILD_DIR=/path/to/villagesql/build
-   make && make install
+   cmake .. -DVillageSQL_BUILD_DIR=$HOME/build/villagesql
+   make -j $(($(getconf _NPROCESSORS_ONLN) - 2)) && make install
    ```
-2. Run the test suite:
+
+   **macOS:**
    ```bash
-   cd /path/to/villagesql/build/mysql-test
+   mkdir -p build && cd build
+   cmake .. -DVillageSQL_BUILD_DIR=~/build/villagesql
+   make -j $(($(getconf _NPROCESSORS_ONLN) - 2)) && make install
+   ```
+
+2. Run the test suite:
+
+   **Linux:**
+   ```bash
+   cd $HOME/build/villagesql/mysql-test
    perl mysql-test-run.pl --suite=/path/to/vsql-network-address/test
    ```
+
+   **macOS:**
+   ```bash
+   cd ~/build/villagesql/mysql-test
+   perl mysql-test-run.pl --suite=/path/to/vsql-network-address/test
+   ```
+
 3. Submit your pull request with a clear description of changes
 
 ## Contact
