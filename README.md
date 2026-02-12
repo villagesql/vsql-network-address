@@ -8,7 +8,7 @@ A comprehensive network address extension for VillageSQL Server providing Postgr
 - **PostgreSQL Compatibility**: Drop-in replacement for PostgreSQL's network address types
 - **Four Custom Types**: INET (IP with optional netmask), CIDR (strict network addresses), MACADDR (6-byte MAC), MACADDR8 (8-byte MAC)
 - **Validation & Conversion**: Comprehensive parsing and formatting for all address types
-- **High Performance**: Optimized C++ implementation with efficient binary storage
+- **Optimized C++ implementation** with binary storage
 
 ## Installation
 
@@ -390,4 +390,4 @@ Join the VillageSQL community:
 
 * File a [bug or issue](./issues) and we will review
 * Start a discussion in the project [discussions](./discussions)
-* Join the [Discord channel](https://discord.gg/villagesql)
+* Join the [Discord channel](https://discord.gg/KSr6whd3Fr)
