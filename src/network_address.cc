@@ -1477,7 +1477,7 @@ void inet_host_impl(vef_context_t* ctx, vef_invalue_t* arg, vef_vdf_result_t* re
   }
   size_t str_len;
   if (network_address::inet_host(arg->bin_value, arg->bin_len,
-                                  result->str_buf, sizeof(result->str_buf), &str_len)) {
+                                  result->str_buf, result->max_str_len, &str_len)) {
     result->type = VEF_RESULT_ERROR;
     return;
   }
@@ -1492,7 +1492,7 @@ void inet_text_impl(vef_context_t* ctx, vef_invalue_t* arg, vef_vdf_result_t* re
   }
   size_t str_len;
   if (network_address::inet_text(arg->bin_value, arg->bin_len,
-                                  result->str_buf, sizeof(result->str_buf), &str_len)) {
+                                  result->str_buf, result->max_str_len, &str_len)) {
     result->type = VEF_RESULT_ERROR;
     return;
   }
@@ -1615,7 +1615,7 @@ void inet_abbrev_impl(vef_context_t* ctx, vef_invalue_t* arg, vef_vdf_result_t* 
   }
   size_t str_len;
   if (network_address::inet_abbrev(arg->bin_value, arg->bin_len,
-                                    result->str_buf, sizeof(result->str_buf), &str_len)) {
+                                    result->str_buf, result->max_str_len, &str_len)) {
     result->type = VEF_RESULT_ERROR;
     return;
   }
@@ -1630,7 +1630,7 @@ void cidr_abbrev_impl(vef_context_t* ctx, vef_invalue_t* arg, vef_vdf_result_t* 
   }
   size_t str_len;
   if (network_address::cidr_abbrev(arg->bin_value, arg->bin_len,
-                                    result->str_buf, sizeof(result->str_buf), &str_len)) {
+                                    result->str_buf, result->max_str_len, &str_len)) {
     result->type = VEF_RESULT_ERROR;
     return;
   }
