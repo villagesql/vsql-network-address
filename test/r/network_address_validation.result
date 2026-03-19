@@ -77,18 +77,26 @@ id	mac8_col
 # CIDR rejects host bits and out-of-range prefixes (returns NULL)
 SELECT cidr_from_string('192.168.1.5/24') IS NULL AS cidr_host_bits_null;
 cidr_host_bits_null
-0
+1
+Warnings:
+Warning	3200	VDF error in function 'cidr_from_string': failed to parse string '192.168.1.5/24'
 SELECT cidr_from_string('10.0.0.0/40') IS NULL AS cidr_mask_out_of_range;
 cidr_mask_out_of_range
-0
+1
+Warnings:
+Warning	3200	VDF error in function 'cidr_from_string': failed to parse string '10.0.0.0/40'
 # INET rejects bogus masks (returns NULL)
 SELECT inet_from_string('10.0.0.1/64') IS NULL AS inet_mask_out_of_range;
 inet_mask_out_of_range
-0
+1
+Warnings:
+Warning	3200	VDF error in function 'inet_from_string': failed to parse string '10.0.0.1/64'
 # MACADDR variants still raise when hex is incomplete
 SELECT macaddr_from_string('08:00:2b:01:02') IS NULL AS macaddr_incomplete;
 macaddr_incomplete
-0
+1
+Warnings:
+Warning	3200	VDF error in function 'macaddr_from_string': failed to parse string '08:00:2b:01:02'
 # IPv6 should now be supported
 SELECT inet_from_string('2001:db8:0000:0000:0000:0000:0000:0001/64') IS NOT NULL AS inet_ipv6_supported;
 inet_ipv6_supported
