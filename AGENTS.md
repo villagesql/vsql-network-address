@@ -73,7 +73,7 @@ Each type provides:
 ## Testing
 
 The extension includes a comprehensive test suite using the MySQL Test Runner (MTR) framework:
-- **Test Location**: `test/` directory with `.test` files and expected `.result` files
+- **Test Location**: `mysql-test/` directory with `.test` files and expected `.result` files
 
 **Default: Using installed VEB**
 
@@ -81,7 +81,7 @@ This method assumes you have successfully run `make install` to install the VEB 
 
 ```bash
 cd /path/to/mysql-test
-perl mysql-test-run.pl --suite=/path/to/vsql-network-address/test
+perl mysql-test-run.pl --suite=/path/to/vsql-network-address/mysql-test
 ```
 
 **Alternative: Using a specific VEB file**
@@ -91,7 +91,7 @@ Use this to test a specific VEB build without installing it first:
 ```bash
 cd /path/to/mysql-test
 VSQL_NETWORK_ADDRESS_VEB=/path/to/vsql-network-address/build/vsql-network-address.veb \
-  perl mysql-test-run.pl --suite=/path/to/vsql-network-address/test
+  perl mysql-test-run.pl --suite=/path/to/vsql-network-address/mysql-test
 ```
 
 **Test Setup Pattern:**

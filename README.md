@@ -270,7 +270,7 @@ SELECT macaddr_to_string(mac_address) FROM devices ORDER BY mac_address;
 ## Testing
 
 The extension includes a comprehensive test suite using the MySQL Test Runner (MTR) framework:
-- **Test Location**: `test/` directory with `.test` files and expected `.result` files
+- **Test Location**: `mysql-test/` directory with `.test` files and expected `.result` files
 
 **Default: Using installed VEB**
 
@@ -279,13 +279,13 @@ This method assumes you have successfully run `make install` to install the VEB 
 **Linux:**
 ```bash
 cd $HOME/build/villagesql/mysql-test
-perl mysql-test-run.pl --suite=/path/to/vsql-network-address/test
+perl mysql-test-run.pl --suite=/path/to/vsql-network-address/mysql-test
 ```
 
 **macOS:**
 ```bash
 cd ~/build/villagesql/mysql-test
-perl mysql-test-run.pl --suite=/path/to/vsql-network-address/test
+perl mysql-test-run.pl --suite=/path/to/vsql-network-address/mysql-test
 ```
 
 **Alternative: Using a specific VEB file**
@@ -296,14 +296,14 @@ Use this to test a specific VEB build without installing it first:
 ```bash
 cd $HOME/build/villagesql/mysql-test
 VSQL_NETWORK_ADDRESS_VEB=/path/to/vsql-network-address/build/vsql-network-address.veb \
-  perl mysql-test-run.pl --suite=/path/to/vsql-network-address/test
+  perl mysql-test-run.pl --suite=/path/to/vsql-network-address/mysql-test
 ```
 
 **macOS:**
 ```bash
 cd ~/build/villagesql/mysql-test
 VSQL_NETWORK_ADDRESS_VEB=/path/to/vsql-network-address/build/vsql-network-address.veb \
-  perl mysql-test-run.pl --suite=/path/to/vsql-network-address/test
+  perl mysql-test-run.pl --suite=/path/to/vsql-network-address/mysql-test
 ```
 
 Test coverage includes:
@@ -324,7 +324,7 @@ vsql-network-address/
 │   └── network_address.cc      # Core network address implementation
 ├── cmake/
 │   └── FindVillageSQL.cmake    # CMake module to locate VillageSQL SDK
-├── test/                       # MTR test suite
+├── mysql-test/                 # MTR test suite
 │   ├── t/                      # Test files
 │   └── r/                      # Expected results
 ├── manifest.json               # VEB package manifest
@@ -373,13 +373,13 @@ VillageSQL welcomes contributions from the community. Please ensure all tests pa
    **Linux:**
    ```bash
    cd $HOME/build/villagesql/mysql-test
-   perl mysql-test-run.pl --suite=/path/to/vsql-network-address/test
+   perl mysql-test-run.pl --suite=/path/to/vsql-network-address/mysql-test
    ```
 
    **macOS:**
    ```bash
    cd ~/build/villagesql/mysql-test
-   perl mysql-test-run.pl --suite=/path/to/vsql-network-address/test
+   perl mysql-test-run.pl --suite=/path/to/vsql-network-address/mysql-test
    ```
 
 3. Submit your pull request with a clear description of changes
