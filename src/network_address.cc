@@ -1602,13 +1602,7 @@ static inline size_t span_size(CustomArg arg) {
   return arg.value().size();
 }
 
-// Helper: write custom-type result from a raw buffer output operation
-static inline bool custom_result_from_raw(
-    bool error, unsigned char* /* buf */, size_t bin_len, CustomResult& out) {
-  if (error) { out.warning("operation failed"); return true; }
-  out.set_length(bin_len);
-  return false;
-}
+
 
 void cidr_compare_impl(CustomArg a, CustomArg b, IntResult out) {
   if (a.is_null() || b.is_null()) { out.set_null(); return; }
