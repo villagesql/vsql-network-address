@@ -97,9 +97,18 @@ set(_villagesql_found FALSE)
 
 # Method 1: Use VillageSQL_BUILD_DIR for development builds
 if(VillageSQL_BUILD_DIR AND NOT _villagesql_found)
-  # Look for staged SDK in build directory
-  file(GLOB _sdk_dirs "${VillageSQL_BUILD_DIR}/villagesql-extension-sdk-*")
+  # Look for staged SDK directories; sort descending by name so the highest
+  # version number is selected (version is part of the directory name).
+  file(GLOB _sdk_dirs_all "${VillageSQL_BUILD_DIR}/villagesql-extension-sdk-*")
+  set(_sdk_dirs "")
+  foreach(_d IN LISTS _sdk_dirs_all)
+    if(IS_DIRECTORY "${_d}")
+      list(APPEND _sdk_dirs "${_d}")
+    endif()
+  endforeach()
+  unset(_sdk_dirs_all)
   if(_sdk_dirs)
+    list(SORT _sdk_dirs ORDER DESCENDING)
     list(GET _sdk_dirs 0 _sdk_dir)
     if(EXISTS "${_sdk_dir}/include/villagesql/extension.h")
       set(VillageSQL_PREFIX "${_sdk_dir}")
