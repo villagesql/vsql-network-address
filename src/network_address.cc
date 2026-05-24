@@ -1424,13 +1424,14 @@ void encode_cidr(std::string_view from, CustomResult out) {
   auto buf = out.buffer();
   size_t length;
   if (network_address::encode_cidr(
-          reinterpret_cast<unsigned char *>(buf.data()), buf.size(),
+          buf.data(), buf.size(),
           from.data(), from.size(), &length)) {
     out.error("invalid CIDR address");
     return;
   }
   out.set_length(length);
 }
+
 void decode_cidr(CustomArg in, StringResult out) {
   if (in.is_null()) {
     out.set_null();
@@ -1440,18 +1441,19 @@ void decode_cidr(CustomArg in, StringResult out) {
   auto buf = out.buffer();
   size_t length;
   if (network_address::decode_cidr(
-          reinterpret_cast<const unsigned char *>(span.data()), span.size(),
+          span.data(), span.size(),
           buf.data(), buf.size(), &length)) {
     out.warning("CIDR decode error");
     return;
   }
   out.set_length(length);
 }
+
 int cmp_cidr(CustomArg a, CustomArg b) {
   auto sa = a.value(), sb = b.value();
   return network_address::cmp_cidr(
-      reinterpret_cast<const unsigned char *>(sa.data()), sa.size(),
-      reinterpret_cast<const unsigned char *>(sb.data()), sb.size());
+      sa.data(), sa.size(),
+      sb.data(), sb.size());
 }
 
 // --- INET ---
@@ -1459,13 +1461,14 @@ void encode_inet(std::string_view from, CustomResult out) {
   auto buf = out.buffer();
   size_t length;
   if (network_address::encode_inet(
-          reinterpret_cast<unsigned char *>(buf.data()), buf.size(),
+          buf.data(), buf.size(),
           from.data(), from.size(), &length)) {
     out.error("invalid INET address");
     return;
   }
   out.set_length(length);
 }
+
 void decode_inet(CustomArg in, StringResult out) {
   if (in.is_null()) {
     out.set_null();
@@ -1475,18 +1478,19 @@ void decode_inet(CustomArg in, StringResult out) {
   auto buf = out.buffer();
   size_t length;
   if (network_address::decode_inet(
-          reinterpret_cast<const unsigned char *>(span.data()), span.size(),
+          span.data(), span.size(),
           buf.data(), buf.size(), &length)) {
     out.warning("INET decode error");
     return;
   }
   out.set_length(length);
 }
+
 int cmp_inet(CustomArg a, CustomArg b) {
   auto sa = a.value(), sb = b.value();
   return network_address::cmp_inet(
-      reinterpret_cast<const unsigned char *>(sa.data()), sa.size(),
-      reinterpret_cast<const unsigned char *>(sb.data()), sb.size());
+      sa.data(), sa.size(),
+      sb.data(), sb.size());
 }
 
 // --- MACADDR ---
@@ -1494,13 +1498,14 @@ void encode_macaddr(std::string_view from, CustomResult out) {
   auto buf = out.buffer();
   size_t length;
   if (network_address::encode_macaddr(
-          reinterpret_cast<unsigned char *>(buf.data()), buf.size(),
+          buf.data(), buf.size(),
           from.data(), from.size(), &length)) {
     out.error("invalid MAC address");
     return;
   }
   out.set_length(length);
 }
+
 void decode_macaddr(CustomArg in, StringResult out) {
   if (in.is_null()) {
     out.set_null();
@@ -1510,18 +1515,19 @@ void decode_macaddr(CustomArg in, StringResult out) {
   auto buf = out.buffer();
   size_t length;
   if (network_address::decode_macaddr(
-          reinterpret_cast<const unsigned char *>(span.data()), span.size(),
+          span.data(), span.size(),
           buf.data(), buf.size(), &length)) {
     out.warning("MACADDR decode error");
     return;
   }
   out.set_length(length);
 }
+
 int cmp_macaddr(CustomArg a, CustomArg b) {
   auto sa = a.value(), sb = b.value();
   return network_address::cmp_macaddr(
-      reinterpret_cast<const unsigned char *>(sa.data()), sa.size(),
-      reinterpret_cast<const unsigned char *>(sb.data()), sb.size());
+      sa.data(), sa.size(),
+      sb.data(), sb.size());
 }
 
 // --- MACADDR8 ---
@@ -1529,13 +1535,14 @@ void encode_macaddr8(std::string_view from, CustomResult out) {
   auto buf = out.buffer();
   size_t length;
   if (network_address::encode_macaddr8(
-          reinterpret_cast<unsigned char *>(buf.data()), buf.size(),
+          buf.data(), buf.size(),
           from.data(), from.size(), &length)) {
     out.error("invalid MAC address (EUI-64)");
     return;
   }
   out.set_length(length);
 }
+
 void decode_macaddr8(CustomArg in, StringResult out) {
   if (in.is_null()) {
     out.set_null();
@@ -1545,18 +1552,19 @@ void decode_macaddr8(CustomArg in, StringResult out) {
   auto buf = out.buffer();
   size_t length;
   if (network_address::decode_macaddr8(
-          reinterpret_cast<const unsigned char *>(span.data()), span.size(),
+          span.data(), span.size(),
           buf.data(), buf.size(), &length)) {
     out.warning("MACADDR8 decode error");
     return;
   }
   out.set_length(length);
 }
+
 int cmp_macaddr8(CustomArg a, CustomArg b) {
   auto sa = a.value(), sb = b.value();
   return network_address::cmp_macaddr8(
-      reinterpret_cast<const unsigned char *>(sa.data()), sa.size(),
-      reinterpret_cast<const unsigned char *>(sb.data()), sb.size());
+      sa.data(), sa.size(),
+      sb.data(), sb.size());
 }
 
 // VDF wrappers for the from_string conversions: StringArg → CustomResult.
@@ -1580,13 +1588,14 @@ void cidr_from_string_vdf(StringArg s, CustomResult out) {
   auto buf = out.buffer();
   size_t length;
   if (network_address::encode_cidr(
-          reinterpret_cast<unsigned char *>(buf.data()), buf.size(), sv.data(),
+          buf.data(), buf.size(), sv.data(),
           sv.size(), &length)) {
     out.warning(parse_error_msg(sv));
     return;
   }
   out.set_length(length);
 }
+
 void inet_from_string_vdf(StringArg s, CustomResult out) {
   if (s.is_null()) {
     out.set_null();
@@ -1596,13 +1605,14 @@ void inet_from_string_vdf(StringArg s, CustomResult out) {
   auto buf = out.buffer();
   size_t length;
   if (network_address::encode_inet(
-          reinterpret_cast<unsigned char *>(buf.data()), buf.size(), sv.data(),
+          buf.data(), buf.size(), sv.data(),
           sv.size(), &length)) {
     out.warning(parse_error_msg(sv));
     return;
   }
   out.set_length(length);
 }
+
 void macaddr_from_string_vdf(StringArg s, CustomResult out) {
   if (s.is_null()) {
     out.set_null();
@@ -1612,13 +1622,14 @@ void macaddr_from_string_vdf(StringArg s, CustomResult out) {
   auto buf = out.buffer();
   size_t length;
   if (network_address::encode_macaddr(
-          reinterpret_cast<unsigned char *>(buf.data()), buf.size(), sv.data(),
+          buf.data(), buf.size(), sv.data(),
           sv.size(), &length)) {
     out.warning(parse_error_msg(sv));
     return;
   }
   out.set_length(length);
 }
+
 void macaddr8_from_string_vdf(StringArg s, CustomResult out) {
   if (s.is_null()) {
     out.set_null();
@@ -1628,7 +1639,7 @@ void macaddr8_from_string_vdf(StringArg s, CustomResult out) {
   auto buf = out.buffer();
   size_t length;
   if (network_address::encode_macaddr8(
-          reinterpret_cast<unsigned char *>(buf.data()), buf.size(), sv.data(),
+          buf.data(), buf.size(), sv.data(),
           sv.size(), &length)) {
     out.warning(parse_error_msg(sv));
     return;
@@ -1642,22 +1653,26 @@ void macaddr8_from_string_vdf(StringArg s, CustomResult out) {
 
 // Helper: get raw const unsigned char* from CustomArg span
 static inline const unsigned char *span_data(CustomArg arg) {
-  return reinterpret_cast<const unsigned char *>(arg.value().data());
+  return arg.value().data();
 }
+
 static inline size_t span_size(CustomArg arg) { return arg.value().size(); }
 
 void cidr_compare_impl(CustomArg a, CustomArg b, IntResult out) {
   if (a.is_null() || b.is_null()) { out.set_null(); return; }
   out.set(cmp_cidr(a, b));
 }
+
 void inet_compare_impl(CustomArg a, CustomArg b, IntResult out) {
   if (a.is_null() || b.is_null()) { out.set_null(); return; }
   out.set(cmp_inet(a, b));
 }
+
 void macaddr_compare_impl(CustomArg a, CustomArg b, IntResult out) {
   if (a.is_null() || b.is_null()) { out.set_null(); return; }
   out.set(cmp_macaddr(a, b));
 }
+
 void macaddr8_compare_impl(CustomArg a, CustomArg b, IntResult out) {
   if (a.is_null() || b.is_null()) { out.set_null(); return; }
   out.set(cmp_macaddr8(a, b));
@@ -1675,6 +1690,7 @@ void inet_family_impl(CustomArg arg, IntResult out) {
   }
   out.set(family);
 }
+
 void inet_masklen_impl(CustomArg arg, IntResult out) {
   if (arg.is_null()) {
     out.set_null();
@@ -1687,6 +1703,7 @@ void inet_masklen_impl(CustomArg arg, IntResult out) {
   }
   out.set(masklen);
 }
+
 void inet_host_impl(CustomArg arg, StringResult out) {
   if (arg.is_null()) {
     out.set_null();
@@ -1701,6 +1718,7 @@ void inet_host_impl(CustomArg arg, StringResult out) {
   }
   out.set_length(str_len);
 }
+
 void inet_text_impl(CustomArg arg, StringResult out) {
   if (arg.is_null()) {
     out.set_null();
@@ -1715,6 +1733,7 @@ void inet_text_impl(CustomArg arg, StringResult out) {
   }
   out.set_length(str_len);
 }
+
 void inet_netmask_impl(CustomArg arg, CustomResult out) {
   if (arg.is_null()) {
     out.set_null();
@@ -1724,12 +1743,13 @@ void inet_netmask_impl(CustomArg arg, CustomResult out) {
   size_t bin_len;
   if (network_address::inet_netmask(
           span_data(arg), span_size(arg),
-          reinterpret_cast<unsigned char *>(buf.data()), &bin_len)) {
+          buf.data(), &bin_len)) {
     out.warning("inet_netmask: error");
     return;
   }
   out.set_length(bin_len);
 }
+
 void inet_hostmask_impl(CustomArg arg, CustomResult out) {
   if (arg.is_null()) {
     out.set_null();
@@ -1739,12 +1759,13 @@ void inet_hostmask_impl(CustomArg arg, CustomResult out) {
   size_t bin_len;
   if (network_address::inet_hostmask(
           span_data(arg), span_size(arg),
-          reinterpret_cast<unsigned char *>(buf.data()), &bin_len)) {
+          buf.data(), &bin_len)) {
     out.warning("inet_hostmask: error");
     return;
   }
   out.set_length(bin_len);
 }
+
 void inet_broadcast_impl(CustomArg arg, CustomResult out) {
   if (arg.is_null()) {
     out.set_null();
@@ -1754,12 +1775,13 @@ void inet_broadcast_impl(CustomArg arg, CustomResult out) {
   size_t bin_len;
   if (network_address::inet_broadcast(
           span_data(arg), span_size(arg),
-          reinterpret_cast<unsigned char *>(buf.data()), &bin_len)) {
+          buf.data(), &bin_len)) {
     out.warning("inet_broadcast: error");
     return;
   }
   out.set_length(bin_len);
 }
+
 void inet_network_impl(CustomArg arg, CustomResult out) {
   if (arg.is_null()) {
     out.set_null();
@@ -1769,12 +1791,13 @@ void inet_network_impl(CustomArg arg, CustomResult out) {
   size_t bin_len;
   if (network_address::inet_network(
           span_data(arg), span_size(arg),
-          reinterpret_cast<unsigned char *>(buf.data()), &bin_len)) {
+          buf.data(), &bin_len)) {
     out.warning("inet_network: error");
     return;
   }
   out.set_length(bin_len);
 }
+
 void inet_set_masklen_impl(CustomArg inet_arg, IntArg len_arg,
                            CustomResult out) {
   if (inet_arg.is_null() || len_arg.is_null()) {
@@ -1785,12 +1808,13 @@ void inet_set_masklen_impl(CustomArg inet_arg, IntArg len_arg,
   size_t bin_len;
   if (network_address::inet_set_masklen(
           span_data(inet_arg), span_size(inet_arg), (int)len_arg.value(),
-          reinterpret_cast<unsigned char *>(buf.data()), &bin_len)) {
+          buf.data(), &bin_len)) {
     out.warning("inet_set_masklen: error");
     return;
   }
   out.set_length(bin_len);
 }
+
 void cidr_set_masklen_impl(CustomArg cidr_arg, IntArg len_arg,
                            CustomResult out) {
   if (cidr_arg.is_null() || len_arg.is_null()) {
@@ -1801,12 +1825,13 @@ void cidr_set_masklen_impl(CustomArg cidr_arg, IntArg len_arg,
   size_t bin_len;
   if (network_address::cidr_set_masklen(
           span_data(cidr_arg), span_size(cidr_arg), (int)len_arg.value(),
-          reinterpret_cast<unsigned char *>(buf.data()), &bin_len)) {
+          buf.data(), &bin_len)) {
     out.warning("cidr_set_masklen: error");
     return;
   }
   out.set_length(bin_len);
 }
+
 void macaddr_trunc_impl(CustomArg arg, CustomResult out) {
   if (arg.is_null()) {
     out.set_null();
@@ -1816,12 +1841,13 @@ void macaddr_trunc_impl(CustomArg arg, CustomResult out) {
   size_t bin_len;
   if (network_address::macaddr_trunc(
           span_data(arg), span_size(arg),
-          reinterpret_cast<unsigned char *>(buf.data()), &bin_len)) {
+          buf.data(), &bin_len)) {
     out.warning("macaddr_trunc: error");
     return;
   }
   out.set_length(bin_len);
 }
+
 void inet_abbrev_impl(CustomArg arg, StringResult out) {
   if (arg.is_null()) {
     out.set_null();
@@ -1836,6 +1862,7 @@ void inet_abbrev_impl(CustomArg arg, StringResult out) {
   }
   out.set_length(str_len);
 }
+
 void cidr_abbrev_impl(CustomArg arg, StringResult out) {
   if (arg.is_null()) {
     out.set_null();
