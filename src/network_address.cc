@@ -1,6 +1,20 @@
-// Copyright (c) 2025 VillageSQL Inc. and Contributors
+/* Copyright (c) 2025 VillageSQL Contributors
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License
+ * as published by the Free Software Foundation; either version 2
+ * of the License, or (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, see <https://www.gnu.org/licenses/>.
+ */
 
-#include <villagesql/extension.h>
+#include <villagesql/vsql.h>
 
 #include <cassert>
 #include <cctype>
@@ -11,9 +25,7 @@
 #include <stdio.h>
 #include <string>
 
-using namespace villagesql::extension_builder;
-using namespace villagesql::func_builder;
-using namespace villagesql::type_builder;
+using namespace ::vsql;
 
 namespace network_address {
 
@@ -1394,413 +1406,658 @@ bool cidr_abbrev(const unsigned char *buffer, size_t buffer_size, char *result, 
 // VEF Registration
 // =============================================================================
 
-// Type name constants
-constexpr const char* CIDR = "CIDR";
-constexpr const char* INET = "INET";
-constexpr const char* MACADDR = "MACADDR";
-constexpr const char* MACADDR8 = "MACADDR8";
+// Type name constants (array form required for make_type<> template parameter)
+static constexpr const char kCidrTypeName[] = "CIDR";
+static constexpr const char kInetTypeName[] = "INET";
+static constexpr const char kMacaddrTypeName[] = "MACADDR";
+static constexpr const char kMacaddr8TypeName[] = "MACADDR8";
+
+// =============================================================================
+// Typed encode/decode/compare wrappers for each type
+// These thin wrappers call into the raw-buffer implementations above.
+// They serve as both the type's encode/decode/compare functions and the
+// user-callable cidr_from_string / cidr_to_string VDFs.
+// =============================================================================
+
+// --- CIDR ---
+void encode_cidr(std::string_view from, CustomResult out) {
+  auto buf = out.buffer();
+  size_t length;
+  if (network_address::encode_cidr(
+          buf.data(), buf.size(),
+          from.data(), from.size(), &length)) {
+    out.error("invalid CIDR address");
+    return;
+  }
+  out.set_length(length);
+}
+
+void decode_cidr(CustomArg in, StringResult out) {
+  if (in.is_null()) {
+    out.set_null();
+    return;
+  }
+  auto span = in.value();
+  auto buf = out.buffer();
+  size_t length;
+  if (network_address::decode_cidr(
+          span.data(), span.size(),
+          buf.data(), buf.size(), &length)) {
+    out.warning("CIDR decode error");
+    return;
+  }
+  out.set_length(length);
+}
+
+int cmp_cidr(CustomArg a, CustomArg b) {
+  auto sa = a.value(), sb = b.value();
+  return network_address::cmp_cidr(
+      sa.data(), sa.size(),
+      sb.data(), sb.size());
+}
+
+// --- INET ---
+void encode_inet(std::string_view from, CustomResult out) {
+  auto buf = out.buffer();
+  size_t length;
+  if (network_address::encode_inet(
+          buf.data(), buf.size(),
+          from.data(), from.size(), &length)) {
+    out.error("invalid INET address");
+    return;
+  }
+  out.set_length(length);
+}
+
+void decode_inet(CustomArg in, StringResult out) {
+  if (in.is_null()) {
+    out.set_null();
+    return;
+  }
+  auto span = in.value();
+  auto buf = out.buffer();
+  size_t length;
+  if (network_address::decode_inet(
+          span.data(), span.size(),
+          buf.data(), buf.size(), &length)) {
+    out.warning("INET decode error");
+    return;
+  }
+  out.set_length(length);
+}
+
+int cmp_inet(CustomArg a, CustomArg b) {
+  auto sa = a.value(), sb = b.value();
+  return network_address::cmp_inet(
+      sa.data(), sa.size(),
+      sb.data(), sb.size());
+}
+
+// --- MACADDR ---
+void encode_macaddr(std::string_view from, CustomResult out) {
+  auto buf = out.buffer();
+  size_t length;
+  if (network_address::encode_macaddr(
+          buf.data(), buf.size(),
+          from.data(), from.size(), &length)) {
+    out.error("invalid MAC address");
+    return;
+  }
+  out.set_length(length);
+}
+
+void decode_macaddr(CustomArg in, StringResult out) {
+  if (in.is_null()) {
+    out.set_null();
+    return;
+  }
+  auto span = in.value();
+  auto buf = out.buffer();
+  size_t length;
+  if (network_address::decode_macaddr(
+          span.data(), span.size(),
+          buf.data(), buf.size(), &length)) {
+    out.warning("MACADDR decode error");
+    return;
+  }
+  out.set_length(length);
+}
+
+int cmp_macaddr(CustomArg a, CustomArg b) {
+  auto sa = a.value(), sb = b.value();
+  return network_address::cmp_macaddr(
+      sa.data(), sa.size(),
+      sb.data(), sb.size());
+}
+
+// --- MACADDR8 ---
+void encode_macaddr8(std::string_view from, CustomResult out) {
+  auto buf = out.buffer();
+  size_t length;
+  if (network_address::encode_macaddr8(
+          buf.data(), buf.size(),
+          from.data(), from.size(), &length)) {
+    out.error("invalid MAC address (EUI-64)");
+    return;
+  }
+  out.set_length(length);
+}
+
+void decode_macaddr8(CustomArg in, StringResult out) {
+  if (in.is_null()) {
+    out.set_null();
+    return;
+  }
+  auto span = in.value();
+  auto buf = out.buffer();
+  size_t length;
+  if (network_address::decode_macaddr8(
+          span.data(), span.size(),
+          buf.data(), buf.size(), &length)) {
+    out.warning("MACADDR8 decode error");
+    return;
+  }
+  out.set_length(length);
+}
+
+int cmp_macaddr8(CustomArg a, CustomArg b) {
+  auto sa = a.value(), sb = b.value();
+  return network_address::cmp_macaddr8(
+      sa.data(), sa.size(),
+      sb.data(), sb.size());
+}
+
+// VDF wrappers for the from_string conversions: StringArg → CustomResult.
+// These use .warning() (→ NULL) on invalid input, matching PostgreSQL behavior.
+// The type-level encode_* functions use .error() (hard error) so that
+// INSERT with invalid data fails rather than silently storing NULL.
+// Helper: build "failed to parse string 'X'" message matching V1 format.
+static std::string parse_error_msg(std::string_view input) {
+  std::string msg = "failed to parse string '";
+  msg.append(input.data(), input.size());
+  msg += "'";
+  return msg;
+}
+
+void cidr_from_string_vdf(StringArg s, CustomResult out) {
+  if (s.is_null()) {
+    out.set_null();
+    return;
+  }
+  auto sv = s.value();
+  auto buf = out.buffer();
+  size_t length;
+  if (network_address::encode_cidr(
+          buf.data(), buf.size(), sv.data(),
+          sv.size(), &length)) {
+    out.warning(parse_error_msg(sv));
+    return;
+  }
+  out.set_length(length);
+}
+
+void inet_from_string_vdf(StringArg s, CustomResult out) {
+  if (s.is_null()) {
+    out.set_null();
+    return;
+  }
+  auto sv = s.value();
+  auto buf = out.buffer();
+  size_t length;
+  if (network_address::encode_inet(
+          buf.data(), buf.size(), sv.data(),
+          sv.size(), &length)) {
+    out.warning(parse_error_msg(sv));
+    return;
+  }
+  out.set_length(length);
+}
+
+void macaddr_from_string_vdf(StringArg s, CustomResult out) {
+  if (s.is_null()) {
+    out.set_null();
+    return;
+  }
+  auto sv = s.value();
+  auto buf = out.buffer();
+  size_t length;
+  if (network_address::encode_macaddr(
+          buf.data(), buf.size(), sv.data(),
+          sv.size(), &length)) {
+    out.warning(parse_error_msg(sv));
+    return;
+  }
+  out.set_length(length);
+}
+
+void macaddr8_from_string_vdf(StringArg s, CustomResult out) {
+  if (s.is_null()) {
+    out.set_null();
+    return;
+  }
+  auto sv = s.value();
+  auto buf = out.buffer();
+  size_t length;
+  if (network_address::encode_macaddr8(
+          buf.data(), buf.size(), sv.data(),
+          sv.size(), &length)) {
+    out.warning(parse_error_msg(sv));
+    return;
+  }
+  out.set_length(length);
+}
 
 // =============================================================================
 // VDF Wrapper Functions
 // =============================================================================
 
-// Comparison functions
-void cidr_compare_impl(vef_context_t* ctx, vef_invalue_t* arg1, vef_invalue_t* arg2, vef_vdf_result_t* result) {
-  if (arg1->is_null || arg2->is_null) {
-    result->type = VEF_RESULT_NULL;
-    return;
-  }
-  result->type = VEF_RESULT_VALUE;
-  result->int_value = network_address::cmp_cidr(arg1->bin_value, arg1->bin_len, arg2->bin_value, arg2->bin_len);
+// Helper: get raw const unsigned char* from CustomArg span
+static inline const unsigned char *span_data(CustomArg arg) {
+  return arg.value().data();
 }
 
-void inet_compare_impl(vef_context_t* ctx, vef_invalue_t* arg1, vef_invalue_t* arg2, vef_vdf_result_t* result) {
-  if (arg1->is_null || arg2->is_null) {
-    result->type = VEF_RESULT_NULL;
-    return;
-  }
-  result->type = VEF_RESULT_VALUE;
-  result->int_value = network_address::cmp_inet(arg1->bin_value, arg1->bin_len, arg2->bin_value, arg2->bin_len);
+static inline size_t span_size(CustomArg arg) { return arg.value().size(); }
+
+void cidr_compare_impl(CustomArg a, CustomArg b, IntResult out) {
+  if (a.is_null() || b.is_null()) { out.set_null(); return; }
+  out.set(cmp_cidr(a, b));
 }
 
-void macaddr_compare_impl(vef_context_t* ctx, vef_invalue_t* arg1, vef_invalue_t* arg2, vef_vdf_result_t* result) {
-  if (arg1->is_null || arg2->is_null) {
-    result->type = VEF_RESULT_NULL;
-    return;
-  }
-  result->type = VEF_RESULT_VALUE;
-  result->int_value = network_address::cmp_macaddr(arg1->bin_value, arg1->bin_len, arg2->bin_value, arg2->bin_len);
+void inet_compare_impl(CustomArg a, CustomArg b, IntResult out) {
+  if (a.is_null() || b.is_null()) { out.set_null(); return; }
+  out.set(cmp_inet(a, b));
 }
 
-void macaddr8_compare_impl(vef_context_t* ctx, vef_invalue_t* arg1, vef_invalue_t* arg2, vef_vdf_result_t* result) {
-  if (arg1->is_null || arg2->is_null) {
-    result->type = VEF_RESULT_NULL;
-    return;
-  }
-  result->type = VEF_RESULT_VALUE;
-  result->int_value = network_address::cmp_macaddr8(arg1->bin_value, arg1->bin_len, arg2->bin_value, arg2->bin_len);
+void macaddr_compare_impl(CustomArg a, CustomArg b, IntResult out) {
+  if (a.is_null() || b.is_null()) { out.set_null(); return; }
+  out.set(cmp_macaddr(a, b));
 }
 
-// Simple extractors
-void inet_family_impl(vef_context_t* ctx, vef_invalue_t* arg, vef_vdf_result_t* result) {
-  if (arg->is_null) {
-    result->type = VEF_RESULT_NULL;
+void macaddr8_compare_impl(CustomArg a, CustomArg b, IntResult out) {
+  if (a.is_null() || b.is_null()) { out.set_null(); return; }
+  out.set(cmp_macaddr8(a, b));
+}
+
+void inet_family_impl(CustomArg arg, IntResult out) {
+  if (arg.is_null()) {
+    out.set_null();
     return;
   }
-  int family = network_address::inet_family(arg->bin_value, arg->bin_len);
+  int family = network_address::inet_family(span_data(arg), span_size(arg));
   if (family < 0) {
-    result->type = VEF_RESULT_NULL;
+    out.set_null();
     return;
   }
-  result->type = VEF_RESULT_VALUE;
-  result->int_value = family;
+  out.set(family);
 }
 
-void inet_masklen_impl(vef_context_t* ctx, vef_invalue_t* arg, vef_vdf_result_t* result) {
-  if (arg->is_null) {
-    result->type = VEF_RESULT_NULL;
+void inet_masklen_impl(CustomArg arg, IntResult out) {
+  if (arg.is_null()) {
+    out.set_null();
     return;
   }
-  int masklen = network_address::inet_masklen(arg->bin_value, arg->bin_len);
+  int masklen = network_address::inet_masklen(span_data(arg), span_size(arg));
   if (masklen < 0) {
-    result->type = VEF_RESULT_NULL;
+    out.set_null();
     return;
   }
-  result->type = VEF_RESULT_VALUE;
-  result->int_value = masklen;
+  out.set(masklen);
 }
 
-void inet_host_impl(vef_context_t* ctx, vef_invalue_t* arg, vef_vdf_result_t* result) {
-  if (arg->is_null) {
-    result->type = VEF_RESULT_NULL;
+void inet_host_impl(CustomArg arg, StringResult out) {
+  if (arg.is_null()) {
+    out.set_null();
     return;
   }
+  auto buf = out.buffer();
   size_t str_len;
-  if (network_address::inet_host(arg->bin_value, arg->bin_len,
-                                  result->str_buf, result->max_str_len, &str_len)) {
-    result->type = VEF_RESULT_ERROR;
+  if (network_address::inet_host(span_data(arg), span_size(arg), buf.data(),
+                                 buf.size(), &str_len)) {
+    out.warning("inet_host: error");
     return;
   }
-  result->type = VEF_RESULT_VALUE;
-  result->actual_len = str_len;
+  out.set_length(str_len);
 }
 
-void inet_text_impl(vef_context_t* ctx, vef_invalue_t* arg, vef_vdf_result_t* result) {
-  if (arg->is_null) {
-    result->type = VEF_RESULT_NULL;
+void inet_text_impl(CustomArg arg, StringResult out) {
+  if (arg.is_null()) {
+    out.set_null();
     return;
   }
+  auto buf = out.buffer();
   size_t str_len;
-  if (network_address::inet_text(arg->bin_value, arg->bin_len,
-                                  result->str_buf, result->max_str_len, &str_len)) {
-    result->type = VEF_RESULT_ERROR;
+  if (network_address::inet_text(span_data(arg), span_size(arg), buf.data(),
+                                 buf.size(), &str_len)) {
+    out.warning("inet_text: error");
     return;
   }
-  result->type = VEF_RESULT_VALUE;
-  result->actual_len = str_len;
+  out.set_length(str_len);
 }
 
-// Mask calculations
-void inet_netmask_impl(vef_context_t* ctx, vef_invalue_t* arg, vef_vdf_result_t* result) {
-  if (arg->is_null) {
-    result->type = VEF_RESULT_NULL;
+void inet_netmask_impl(CustomArg arg, CustomResult out) {
+  if (arg.is_null()) {
+    out.set_null();
     return;
   }
+  auto buf = out.buffer();
   size_t bin_len;
-  if (network_address::inet_netmask(arg->bin_value, arg->bin_len,
-                                     result->bin_buf, &bin_len)) {
-    result->type = VEF_RESULT_ERROR;
+  if (network_address::inet_netmask(
+          span_data(arg), span_size(arg),
+          buf.data(), &bin_len)) {
+    out.warning("inet_netmask: error");
     return;
   }
-  result->type = VEF_RESULT_VALUE;
-  result->actual_len = bin_len;
+  out.set_length(bin_len);
 }
 
-void inet_hostmask_impl(vef_context_t* ctx, vef_invalue_t* arg, vef_vdf_result_t* result) {
-  if (arg->is_null) {
-    result->type = VEF_RESULT_NULL;
+void inet_hostmask_impl(CustomArg arg, CustomResult out) {
+  if (arg.is_null()) {
+    out.set_null();
     return;
   }
+  auto buf = out.buffer();
   size_t bin_len;
-  if (network_address::inet_hostmask(arg->bin_value, arg->bin_len,
-                                      result->bin_buf, &bin_len)) {
-    result->type = VEF_RESULT_ERROR;
+  if (network_address::inet_hostmask(
+          span_data(arg), span_size(arg),
+          buf.data(), &bin_len)) {
+    out.warning("inet_hostmask: error");
     return;
   }
-  result->type = VEF_RESULT_VALUE;
-  result->actual_len = bin_len;
+  out.set_length(bin_len);
 }
 
-void inet_broadcast_impl(vef_context_t* ctx, vef_invalue_t* arg, vef_vdf_result_t* result) {
-  if (arg->is_null) {
-    result->type = VEF_RESULT_NULL;
+void inet_broadcast_impl(CustomArg arg, CustomResult out) {
+  if (arg.is_null()) {
+    out.set_null();
     return;
   }
+  auto buf = out.buffer();
   size_t bin_len;
-  if (network_address::inet_broadcast(arg->bin_value, arg->bin_len,
-                                       result->bin_buf, &bin_len)) {
-    result->type = VEF_RESULT_ERROR;
+  if (network_address::inet_broadcast(
+          span_data(arg), span_size(arg),
+          buf.data(), &bin_len)) {
+    out.warning("inet_broadcast: error");
     return;
   }
-  result->type = VEF_RESULT_VALUE;
-  result->actual_len = bin_len;
+  out.set_length(bin_len);
 }
 
-void inet_network_impl(vef_context_t* ctx, vef_invalue_t* arg, vef_vdf_result_t* result) {
-  if (arg->is_null) {
-    result->type = VEF_RESULT_NULL;
+void inet_network_impl(CustomArg arg, CustomResult out) {
+  if (arg.is_null()) {
+    out.set_null();
     return;
   }
+  auto buf = out.buffer();
   size_t bin_len;
-  if (network_address::inet_network(arg->bin_value, arg->bin_len,
-                                     result->bin_buf, &bin_len)) {
-    result->type = VEF_RESULT_ERROR;
+  if (network_address::inet_network(
+          span_data(arg), span_size(arg),
+          buf.data(), &bin_len)) {
+    out.warning("inet_network: error");
     return;
   }
-  result->type = VEF_RESULT_VALUE;
-  result->actual_len = bin_len;
+  out.set_length(bin_len);
 }
 
-// Modifiers
-void inet_set_masklen_impl(vef_context_t* ctx, vef_invalue_t* inet_arg, vef_invalue_t* len_arg, vef_vdf_result_t* result) {
-  if (inet_arg->is_null || len_arg->is_null) {
-    result->type = VEF_RESULT_NULL;
+void inet_set_masklen_impl(CustomArg inet_arg, IntArg len_arg,
+                           CustomResult out) {
+  if (inet_arg.is_null() || len_arg.is_null()) {
+    out.set_null();
     return;
   }
+  auto buf = out.buffer();
   size_t bin_len;
-  if (network_address::inet_set_masklen(inet_arg->bin_value, inet_arg->bin_len,
-                                         (int)len_arg->int_value, result->bin_buf, &bin_len)) {
-    result->type = VEF_RESULT_ERROR;
+  if (network_address::inet_set_masklen(
+          span_data(inet_arg), span_size(inet_arg), (int)len_arg.value(),
+          buf.data(), &bin_len)) {
+    out.warning("inet_set_masklen: error");
     return;
   }
-  result->type = VEF_RESULT_VALUE;
-  result->actual_len = bin_len;
+  out.set_length(bin_len);
 }
 
-void cidr_set_masklen_impl(vef_context_t* ctx, vef_invalue_t* cidr_arg, vef_invalue_t* len_arg, vef_vdf_result_t* result) {
-  if (cidr_arg->is_null || len_arg->is_null) {
-    result->type = VEF_RESULT_NULL;
+void cidr_set_masklen_impl(CustomArg cidr_arg, IntArg len_arg,
+                           CustomResult out) {
+  if (cidr_arg.is_null() || len_arg.is_null()) {
+    out.set_null();
     return;
   }
+  auto buf = out.buffer();
   size_t bin_len;
-  if (network_address::cidr_set_masklen(cidr_arg->bin_value, cidr_arg->bin_len,
-                                         (int)len_arg->int_value, result->bin_buf, &bin_len)) {
-    result->type = VEF_RESULT_ERROR;
+  if (network_address::cidr_set_masklen(
+          span_data(cidr_arg), span_size(cidr_arg), (int)len_arg.value(),
+          buf.data(), &bin_len)) {
+    out.warning("cidr_set_masklen: error");
     return;
   }
-  result->type = VEF_RESULT_VALUE;
-  result->actual_len = bin_len;
+  out.set_length(bin_len);
 }
 
-void macaddr_trunc_impl(vef_context_t* ctx, vef_invalue_t* arg, vef_vdf_result_t* result) {
-  if (arg->is_null) {
-    result->type = VEF_RESULT_NULL;
+void macaddr_trunc_impl(CustomArg arg, CustomResult out) {
+  if (arg.is_null()) {
+    out.set_null();
     return;
   }
+  auto buf = out.buffer();
   size_t bin_len;
-  if (network_address::macaddr_trunc(arg->bin_value, arg->bin_len,
-                                      result->bin_buf, &bin_len)) {
-    result->type = VEF_RESULT_ERROR;
+  if (network_address::macaddr_trunc(
+          span_data(arg), span_size(arg),
+          buf.data(), &bin_len)) {
+    out.warning("macaddr_trunc: error");
     return;
   }
-  result->type = VEF_RESULT_VALUE;
-  result->actual_len = bin_len;
+  out.set_length(bin_len);
 }
 
-// Formatting
-void inet_abbrev_impl(vef_context_t* ctx, vef_invalue_t* arg, vef_vdf_result_t* result) {
-  if (arg->is_null) {
-    result->type = VEF_RESULT_NULL;
+void inet_abbrev_impl(CustomArg arg, StringResult out) {
+  if (arg.is_null()) {
+    out.set_null();
     return;
   }
+  auto buf = out.buffer();
   size_t str_len;
-  if (network_address::inet_abbrev(arg->bin_value, arg->bin_len,
-                                    result->str_buf, result->max_str_len, &str_len)) {
-    result->type = VEF_RESULT_ERROR;
+  if (network_address::inet_abbrev(span_data(arg), span_size(arg), buf.data(),
+                                   buf.size(), &str_len)) {
+    out.warning("inet_abbrev: error");
     return;
   }
-  result->type = VEF_RESULT_VALUE;
-  result->actual_len = str_len;
+  out.set_length(str_len);
 }
 
-void cidr_abbrev_impl(vef_context_t* ctx, vef_invalue_t* arg, vef_vdf_result_t* result) {
-  if (arg->is_null) {
-    result->type = VEF_RESULT_NULL;
+void cidr_abbrev_impl(CustomArg arg, StringResult out) {
+  if (arg.is_null()) {
+    out.set_null();
     return;
   }
+  auto buf = out.buffer();
   size_t str_len;
-  if (network_address::cidr_abbrev(arg->bin_value, arg->bin_len,
-                                    result->str_buf, result->max_str_len, &str_len)) {
-    result->type = VEF_RESULT_ERROR;
+  if (network_address::cidr_abbrev(span_data(arg), span_size(arg), buf.data(),
+                                   buf.size(), &str_len)) {
+    out.warning("cidr_abbrev: error");
     return;
   }
-  result->type = VEF_RESULT_VALUE;
-  result->actual_len = str_len;
+  out.set_length(str_len);
 }
+
+// =============================================================================
+// Type descriptors (constexpr — evaluated before VEF_GENERATE_ENTRY_POINTS)
+// =============================================================================
+
+constexpr auto CIDR = make_type<kCidrTypeName>()
+                          .persisted_length(19)
+                          .max_decode_buffer_length(64)
+                          .from_string<&encode_cidr>()
+                          .to_string<&decode_cidr>()
+                          .compare<&cmp_cidr>()
+                          .intrinsic_default_str("::/0")
+                          .build();
+
+constexpr auto INET = make_type<kInetTypeName>()
+                          .persisted_length(19)
+                          .max_decode_buffer_length(64)
+                          .from_string<&encode_inet>()
+                          .to_string<&decode_inet>()
+                          .compare<&cmp_inet>()
+                          .intrinsic_default_str("::")
+                          .build();
+
+constexpr auto MACADDR = make_type<kMacaddrTypeName>()
+                             .persisted_length(6)
+                             .max_decode_buffer_length(32)
+                             .from_string<&encode_macaddr>()
+                             .to_string<&decode_macaddr>()
+                             .compare<&cmp_macaddr>()
+                             .intrinsic_default_str("00:00:00:00:00:00")
+                             .build();
+
+constexpr auto MACADDR8 = make_type<kMacaddr8TypeName>()
+                              .persisted_length(8)
+                              .max_decode_buffer_length(32)
+                              .from_string<&encode_macaddr8>()
+                              .to_string<&decode_macaddr8>()
+                              .compare<&cmp_macaddr8>()
+                              .intrinsic_default_str("00:00:00:00:00:00:00:00")
+                              .build();
 
 VEF_GENERATE_ENTRY_POINTS(
-  make_extension("vsql_network_address", "0.0.1")
-    // CIDR type definition
-    .type(make_type(CIDR)
-      .persisted_length(19)  // Max size for IPv6Network
-      .max_decode_buffer_length(64)
-      .encode(&network_address::encode_cidr)
-      .decode(&network_address::decode_cidr)
-      .compare(&network_address::cmp_cidr)
-      .build())
+    make_extension()
+        .type(CIDR)
+        .type(INET)
+        .type(MACADDR)
+        .type(MACADDR8)
 
-    // INET type definition
-    .type(make_type(INET)
-      .persisted_length(19)  // Max size for IPv6Network
-      .max_decode_buffer_length(64)
-      .encode(&network_address::encode_inet)
-      .decode(&network_address::decode_inet)
-      .compare(&network_address::cmp_inet)
-      .build())
+        // Explicit conversion VDFs
+        .func(make_func<&cidr_from_string_vdf>("cidr_from_string")
+                  .returns(CIDR)
+                  .param(STRING)
+                  .buffer_size(19)
+                  .build())
+        .func(make_func<&decode_cidr>("cidr_to_string")
+                  .returns(STRING)
+                  .param(CIDR)
+                  .buffer_size(64)
+                  .build())
+        .func(make_func<&inet_from_string_vdf>("inet_from_string")
+                  .returns(INET)
+                  .param(STRING)
+                  .buffer_size(19)
+                  .build())
+        .func(make_func<&decode_inet>("inet_to_string")
+                  .returns(STRING)
+                  .param(INET)
+                  .buffer_size(64)
+                  .build())
+        .func(make_func<&macaddr_from_string_vdf>("macaddr_from_string")
+                  .returns(MACADDR)
+                  .param(STRING)
+                  .buffer_size(6)
+                  .build())
+        .func(make_func<&decode_macaddr>("macaddr_to_string")
+                  .returns(STRING)
+                  .param(MACADDR)
+                  .buffer_size(32)
+                  .build())
+        .func(make_func<&macaddr8_from_string_vdf>("macaddr8_from_string")
+                  .returns(MACADDR8)
+                  .param(STRING)
+                  .buffer_size(8)
+                  .build())
+        .func(make_func<&decode_macaddr8>("macaddr8_to_string")
+                  .returns(STRING)
+                  .param(MACADDR8)
+                  .buffer_size(32)
+                  .build())
 
-    // MACADDR type definition
-    .type(make_type(MACADDR)
-      .persisted_length(6)
-      .max_decode_buffer_length(32)
-      .encode(&network_address::encode_macaddr)
-      .decode(&network_address::decode_macaddr)
-      .compare(&network_address::cmp_macaddr)
-      .build())
+        // Comparison
+        .func(make_func<&cidr_compare_impl>("cidr_compare")
+                  .returns(INT)
+                  .param(CIDR)
+                  .param(CIDR)
+                  .build())
+        .func(make_func<&inet_compare_impl>("inet_compare")
+                  .returns(INT)
+                  .param(INET)
+                  .param(INET)
+                  .build())
+        .func(make_func<&macaddr_compare_impl>("macaddr_compare")
+                  .returns(INT)
+                  .param(MACADDR)
+                  .param(MACADDR)
+                  .build())
+        .func(make_func<&macaddr8_compare_impl>("macaddr8_compare")
+                  .returns(INT)
+                  .param(MACADDR8)
+                  .param(MACADDR8)
+                  .build())
 
-    // MACADDR8 type definition
-    .type(make_type(MACADDR8)
-      .persisted_length(8)
-      .max_decode_buffer_length(32)
-      .encode(&network_address::encode_macaddr8)
-      .decode(&network_address::decode_macaddr8)
-      .compare(&network_address::cmp_macaddr8)
-      .build())
+        // Simple extractors
+        .func(make_func<&inet_family_impl>("inet_family")
+                  .returns(INT)
+                  .param(INET)
+                  .build())
+        .func(make_func<&inet_masklen_impl>("inet_masklen")
+                  .returns(INT)
+                  .param(INET)
+                  .build())
+        .func(make_func<&inet_host_impl>("inet_host")
+                  .returns(STRING)
+                  .param(INET)
+                  .buffer_size(64)
+                  .build())
+        .func(make_func<&inet_text_impl>("inet_text")
+                  .returns(STRING)
+                  .param(INET)
+                  .buffer_size(64)
+                  .build())
 
-    // CIDR conversion functions
-    .func(make_func("cidr_from_string")
-      .from_string<&network_address::encode_cidr>("CIDR"))
+        // Mask calculations
+        .func(make_func<&inet_netmask_impl>("inet_netmask")
+                  .returns(INET)
+                  .param(INET)
+                  .buffer_size(19)
+                  .build())
+        .func(make_func<&inet_hostmask_impl>("inet_hostmask")
+                  .returns(INET)
+                  .param(INET)
+                  .buffer_size(19)
+                  .build())
+        .func(make_func<&inet_broadcast_impl>("inet_broadcast")
+                  .returns(INET)
+                  .param(INET)
+                  .buffer_size(19)
+                  .build())
+        .func(make_func<&inet_network_impl>("inet_network")
+                  .returns(CIDR)
+                  .param(INET)
+                  .buffer_size(19)
+                  .build())
 
-    .func(make_func("cidr_to_string")
-      .to_string<&network_address::decode_cidr>("CIDR"))
+        // Modifiers
+        .func(make_func<&inet_set_masklen_impl>("inet_set_masklen")
+                  .returns(INET)
+                  .param(INET)
+                  .param(INT)
+                  .buffer_size(19)
+                  .build())
+        .func(make_func<&cidr_set_masklen_impl>("cidr_set_masklen")
+                  .returns(CIDR)
+                  .param(CIDR)
+                  .param(INT)
+                  .buffer_size(19)
+                  .build())
+        .func(make_func<&macaddr_trunc_impl>("macaddr_trunc")
+                  .returns(MACADDR)
+                  .param(MACADDR)
+                  .buffer_size(6)
+                  .build())
 
-    // INET conversion functions
-    .func(make_func("inet_from_string")
-      .from_string<&network_address::encode_inet>("INET"))
-
-    .func(make_func("inet_to_string")
-      .to_string<&network_address::decode_inet>("INET"))
-
-    // MACADDR conversion functions
-    .func(make_func("macaddr_from_string")
-      .from_string<&network_address::encode_macaddr>("MACADDR"))
-
-    .func(make_func("macaddr_to_string")
-      .to_string<&network_address::decode_macaddr>("MACADDR"))
-
-    // MACADDR8 conversion functions
-    .func(make_func("macaddr8_from_string")
-      .from_string<&network_address::encode_macaddr8>("MACADDR8"))
-
-    .func(make_func("macaddr8_to_string")
-      .to_string<&network_address::decode_macaddr8>("MACADDR8"))
-
-    // Comparison functions
-    .func(make_func<&cidr_compare_impl>("cidr_compare")
-      .returns(INT)
-      .param(CIDR)
-      .param(CIDR)
-      .build())
-
-    .func(make_func<&inet_compare_impl>("inet_compare")
-      .returns(INT)
-      .param(INET)
-      .param(INET)
-      .build())
-
-    .func(make_func<&macaddr_compare_impl>("macaddr_compare")
-      .returns(INT)
-      .param(MACADDR)
-      .param(MACADDR)
-      .build())
-
-    .func(make_func<&macaddr8_compare_impl>("macaddr8_compare")
-      .returns(INT)
-      .param(MACADDR8)
-      .param(MACADDR8)
-      .build())
-
-    // Simple extractors
-    .func(make_func<&inet_family_impl>("inet_family")
-      .returns(INT)
-      .param(INET)
-      .build())
-
-    .func(make_func<&inet_masklen_impl>("inet_masklen")
-      .returns(INT)
-      .param(INET)
-      .build())
-
-    .func(make_func<&inet_host_impl>("inet_host")
-      .returns(STRING)
-      .param(INET)
-      .buffer_size(64)
-      .build())
-
-    .func(make_func<&inet_text_impl>("inet_text")
-      .returns(STRING)
-      .param(INET)
-      .buffer_size(64)
-      .build())
-
-    // Mask calculations
-    .func(make_func<&inet_netmask_impl>("inet_netmask")
-      .returns(INET)
-      .param(INET)
-      .build())
-
-    .func(make_func<&inet_hostmask_impl>("inet_hostmask")
-      .returns(INET)
-      .param(INET)
-      .build())
-
-    .func(make_func<&inet_broadcast_impl>("inet_broadcast")
-      .returns(INET)
-      .param(INET)
-      .build())
-
-    .func(make_func<&inet_network_impl>("inet_network")
-      .returns(CIDR)
-      .param(INET)
-      .build())
-
-    // Modifiers
-    .func(make_func<&inet_set_masklen_impl>("inet_set_masklen")
-      .returns(INET)
-      .param(INET)
-      .param(INT)
-      .build())
-
-    .func(make_func<&cidr_set_masklen_impl>("cidr_set_masklen")
-      .returns(CIDR)
-      .param(CIDR)
-      .param(INT)
-      .build())
-
-    .func(make_func<&macaddr_trunc_impl>("macaddr_trunc")
-      .returns(MACADDR)
-      .param(MACADDR)
-      .build())
-
-    // Formatting
-    .func(make_func<&inet_abbrev_impl>("inet_abbrev")
-      .returns(STRING)
-      .param(INET)
-      .buffer_size(64)
-      .build())
-
-    .func(make_func<&cidr_abbrev_impl>("cidr_abbrev")
-      .returns(STRING)
-      .param(CIDR)
-      .buffer_size(64)
-      .build())
-)
+        // Formatting
+        .func(make_func<&inet_abbrev_impl>("inet_abbrev")
+                  .returns(STRING)
+                  .param(INET)
+                  .buffer_size(64)
+                  .build())
+        .func(make_func<&cidr_abbrev_impl>("cidr_abbrev")
+                  .returns(STRING)
+                  .param(CIDR)
+                  .buffer_size(64)
+                  .build()))
