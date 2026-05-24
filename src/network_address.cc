@@ -1413,14 +1413,14 @@ static constexpr const char kMacaddrTypeName[] = "MACADDR";
 static constexpr const char kMacaddr8TypeName[] = "MACADDR8";
 
 // =============================================================================
-// V3 typed encode/decode/compare wrappers for each type
+// Typed encode/decode/compare wrappers for each type
 // These thin wrappers call into the raw-buffer implementations above.
 // They serve as both the type's encode/decode/compare functions and the
 // user-callable cidr_from_string / cidr_to_string VDFs.
 // =============================================================================
 
 // --- CIDR ---
-void encode_cidr_v3(std::string_view from, CustomResult out) {
+void encode_cidr(std::string_view from, CustomResult out) {
   auto buf = out.buffer();
   size_t length;
   if (network_address::encode_cidr(
@@ -1431,7 +1431,7 @@ void encode_cidr_v3(std::string_view from, CustomResult out) {
   }
   out.set_length(length);
 }
-void decode_cidr_v3(CustomArg in, StringResult out) {
+void decode_cidr(CustomArg in, StringResult out) {
   if (in.is_null()) {
     out.set_null();
     return;
@@ -1447,7 +1447,7 @@ void decode_cidr_v3(CustomArg in, StringResult out) {
   }
   out.set_length(length);
 }
-int cmp_cidr_v3(CustomArg a, CustomArg b) {
+int cmp_cidr(CustomArg a, CustomArg b) {
   auto sa = a.value(), sb = b.value();
   return network_address::cmp_cidr(
       reinterpret_cast<const unsigned char *>(sa.data()), sa.size(),
@@ -1455,7 +1455,7 @@ int cmp_cidr_v3(CustomArg a, CustomArg b) {
 }
 
 // --- INET ---
-void encode_inet_v3(std::string_view from, CustomResult out) {
+void encode_inet(std::string_view from, CustomResult out) {
   auto buf = out.buffer();
   size_t length;
   if (network_address::encode_inet(
@@ -1466,7 +1466,7 @@ void encode_inet_v3(std::string_view from, CustomResult out) {
   }
   out.set_length(length);
 }
-void decode_inet_v3(CustomArg in, StringResult out) {
+void decode_inet(CustomArg in, StringResult out) {
   if (in.is_null()) {
     out.set_null();
     return;
@@ -1482,7 +1482,7 @@ void decode_inet_v3(CustomArg in, StringResult out) {
   }
   out.set_length(length);
 }
-int cmp_inet_v3(CustomArg a, CustomArg b) {
+int cmp_inet(CustomArg a, CustomArg b) {
   auto sa = a.value(), sb = b.value();
   return network_address::cmp_inet(
       reinterpret_cast<const unsigned char *>(sa.data()), sa.size(),
@@ -1490,7 +1490,7 @@ int cmp_inet_v3(CustomArg a, CustomArg b) {
 }
 
 // --- MACADDR ---
-void encode_macaddr_v3(std::string_view from, CustomResult out) {
+void encode_macaddr(std::string_view from, CustomResult out) {
   auto buf = out.buffer();
   size_t length;
   if (network_address::encode_macaddr(
@@ -1501,7 +1501,7 @@ void encode_macaddr_v3(std::string_view from, CustomResult out) {
   }
   out.set_length(length);
 }
-void decode_macaddr_v3(CustomArg in, StringResult out) {
+void decode_macaddr(CustomArg in, StringResult out) {
   if (in.is_null()) {
     out.set_null();
     return;
@@ -1517,7 +1517,7 @@ void decode_macaddr_v3(CustomArg in, StringResult out) {
   }
   out.set_length(length);
 }
-int cmp_macaddr_v3(CustomArg a, CustomArg b) {
+int cmp_macaddr(CustomArg a, CustomArg b) {
   auto sa = a.value(), sb = b.value();
   return network_address::cmp_macaddr(
       reinterpret_cast<const unsigned char *>(sa.data()), sa.size(),
@@ -1525,7 +1525,7 @@ int cmp_macaddr_v3(CustomArg a, CustomArg b) {
 }
 
 // --- MACADDR8 ---
-void encode_macaddr8_v3(std::string_view from, CustomResult out) {
+void encode_macaddr8(std::string_view from, CustomResult out) {
   auto buf = out.buffer();
   size_t length;
   if (network_address::encode_macaddr8(
@@ -1536,7 +1536,7 @@ void encode_macaddr8_v3(std::string_view from, CustomResult out) {
   }
   out.set_length(length);
 }
-void decode_macaddr8_v3(CustomArg in, StringResult out) {
+void decode_macaddr8(CustomArg in, StringResult out) {
   if (in.is_null()) {
     out.set_null();
     return;
@@ -1552,7 +1552,7 @@ void decode_macaddr8_v3(CustomArg in, StringResult out) {
   }
   out.set_length(length);
 }
-int cmp_macaddr8_v3(CustomArg a, CustomArg b) {
+int cmp_macaddr8(CustomArg a, CustomArg b) {
   auto sa = a.value(), sb = b.value();
   return network_address::cmp_macaddr8(
       reinterpret_cast<const unsigned char *>(sa.data()), sa.size(),
@@ -1561,7 +1561,7 @@ int cmp_macaddr8_v3(CustomArg a, CustomArg b) {
 
 // VDF wrappers for the from_string conversions: StringArg → CustomResult.
 // These use .warning() (→ NULL) on invalid input, matching PostgreSQL behavior.
-// The type-level encode_*_v3 functions use .error() (hard error) so that
+// The type-level encode_* functions use .error() (hard error) so that
 // INSERT with invalid data fails rather than silently storing NULL.
 // Helper: build "failed to parse string 'X'" message matching V1 format.
 static std::string parse_error_msg(std::string_view input) {
@@ -1637,7 +1637,7 @@ void macaddr8_from_string_vdf(StringArg s, CustomResult out) {
 }
 
 // =============================================================================
-// VDF Wrapper Functions — V3 typed signatures
+// VDF Wrapper Functions
 // =============================================================================
 
 // Helper: get raw const unsigned char* from CustomArg span
@@ -1647,36 +1647,20 @@ static inline const unsigned char *span_data(CustomArg arg) {
 static inline size_t span_size(CustomArg arg) { return arg.value().size(); }
 
 void cidr_compare_impl(CustomArg a, CustomArg b, IntResult out) {
-  if (a.is_null() || b.is_null()) {
-    out.set_null();
-    return;
-  }
-  out.set(network_address::cmp_cidr(span_data(a), span_size(a), span_data(b),
-                                    span_size(b)));
+  if (a.is_null() || b.is_null()) { out.set_null(); return; }
+  out.set(cmp_cidr(a, b));
 }
 void inet_compare_impl(CustomArg a, CustomArg b, IntResult out) {
-  if (a.is_null() || b.is_null()) {
-    out.set_null();
-    return;
-  }
-  out.set(network_address::cmp_inet(span_data(a), span_size(a), span_data(b),
-                                    span_size(b)));
+  if (a.is_null() || b.is_null()) { out.set_null(); return; }
+  out.set(cmp_inet(a, b));
 }
 void macaddr_compare_impl(CustomArg a, CustomArg b, IntResult out) {
-  if (a.is_null() || b.is_null()) {
-    out.set_null();
-    return;
-  }
-  out.set(network_address::cmp_macaddr(span_data(a), span_size(a), span_data(b),
-                                       span_size(b)));
+  if (a.is_null() || b.is_null()) { out.set_null(); return; }
+  out.set(cmp_macaddr(a, b));
 }
 void macaddr8_compare_impl(CustomArg a, CustomArg b, IntResult out) {
-  if (a.is_null() || b.is_null()) {
-    out.set_null();
-    return;
-  }
-  out.set(network_address::cmp_macaddr8(span_data(a), span_size(a),
-                                        span_data(b), span_size(b)));
+  if (a.is_null() || b.is_null()) { out.set_null(); return; }
+  out.set(cmp_macaddr8(a, b));
 }
 
 void inet_family_impl(CustomArg arg, IntResult out) {
@@ -1874,36 +1858,36 @@ void cidr_abbrev_impl(CustomArg arg, StringResult out) {
 constexpr auto CIDR = make_type<kCidrTypeName>()
                           .persisted_length(19)
                           .max_decode_buffer_length(64)
-                          .from_string<&encode_cidr_v3>()
-                          .to_string<&decode_cidr_v3>()
-                          .compare<&cmp_cidr_v3>()
+                          .from_string<&encode_cidr>()
+                          .to_string<&decode_cidr>()
+                          .compare<&cmp_cidr>()
                           .intrinsic_default_str("::/0")
                           .build();
 
 constexpr auto INET = make_type<kInetTypeName>()
                           .persisted_length(19)
                           .max_decode_buffer_length(64)
-                          .from_string<&encode_inet_v3>()
-                          .to_string<&decode_inet_v3>()
-                          .compare<&cmp_inet_v3>()
+                          .from_string<&encode_inet>()
+                          .to_string<&decode_inet>()
+                          .compare<&cmp_inet>()
                           .intrinsic_default_str("::")
                           .build();
 
 constexpr auto MACADDR = make_type<kMacaddrTypeName>()
                              .persisted_length(6)
                              .max_decode_buffer_length(32)
-                             .from_string<&encode_macaddr_v3>()
-                             .to_string<&decode_macaddr_v3>()
-                             .compare<&cmp_macaddr_v3>()
+                             .from_string<&encode_macaddr>()
+                             .to_string<&decode_macaddr>()
+                             .compare<&cmp_macaddr>()
                              .intrinsic_default_str("00:00:00:00:00:00")
                              .build();
 
 constexpr auto MACADDR8 = make_type<kMacaddr8TypeName>()
                               .persisted_length(8)
                               .max_decode_buffer_length(32)
-                              .from_string<&encode_macaddr8_v3>()
-                              .to_string<&decode_macaddr8_v3>()
-                              .compare<&cmp_macaddr8_v3>()
+                              .from_string<&encode_macaddr8>()
+                              .to_string<&decode_macaddr8>()
+                              .compare<&cmp_macaddr8>()
                               .intrinsic_default_str("00:00:00:00:00:00:00:00")
                               .build();
 
@@ -1920,7 +1904,7 @@ VEF_GENERATE_ENTRY_POINTS(
                   .param(STRING)
                   .buffer_size(19)
                   .build())
-        .func(make_func<&decode_cidr_v3>("cidr_to_string")
+        .func(make_func<&decode_cidr>("cidr_to_string")
                   .returns(STRING)
                   .param(CIDR)
                   .buffer_size(64)
@@ -1930,7 +1914,7 @@ VEF_GENERATE_ENTRY_POINTS(
                   .param(STRING)
                   .buffer_size(19)
                   .build())
-        .func(make_func<&decode_inet_v3>("inet_to_string")
+        .func(make_func<&decode_inet>("inet_to_string")
                   .returns(STRING)
                   .param(INET)
                   .buffer_size(64)
@@ -1940,7 +1924,7 @@ VEF_GENERATE_ENTRY_POINTS(
                   .param(STRING)
                   .buffer_size(6)
                   .build())
-        .func(make_func<&decode_macaddr_v3>("macaddr_to_string")
+        .func(make_func<&decode_macaddr>("macaddr_to_string")
                   .returns(STRING)
                   .param(MACADDR)
                   .buffer_size(32)
@@ -1950,7 +1934,7 @@ VEF_GENERATE_ENTRY_POINTS(
                   .param(STRING)
                   .buffer_size(8)
                   .build())
-        .func(make_func<&decode_macaddr8_v3>("macaddr8_to_string")
+        .func(make_func<&decode_macaddr8>("macaddr8_to_string")
                   .returns(STRING)
                   .param(MACADDR8)
                   .buffer_size(32)
