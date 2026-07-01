@@ -105,7 +105,7 @@ if ($VSQL_NETWORK_ADDRESS_VEB) {
   --remove_file $veb_dest
   --copy_file $VSQL_NETWORK_ADDRESS_VEB $veb_dest
 }
-INSTALL EXTENSION 'vsql-network-address';
+INSTALL EXTENSION vsql_network_address;
 ```
 
 ## Extension Installation
