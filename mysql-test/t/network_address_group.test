@@ -1,0 +1,63 @@
+# Setup: Copy VEB to veb_dir if VSQL_NETWORK_ADDRESS_VEB is set, then install extension
+--let $veb_dest = `SELECT CONCAT(@@veb_dir, '/veb')`
+if ($VSQL_NETWORK_ADDRESS_VEB) {
+  --error 0,1
+  --remove_file $veb_dest
+  --copy_file $VSQL_NETWORK_ADDRESS_VEB $veb_dest
+}
+INSTALL EXTENSION vsql_network_address;
+
+########################################################################
+#
+# Test: network_address_group
+# Purpose: GROUP BY / COUNT(DISTINCT) grouping correctness for network types.
+#          Equal values must land in the same group. IPv4Network has a trailing
+#          padding byte that cmp ignores; if a stored value's padding is not
+#          canonical, the server's binary hash fallback buckets equal values
+#          apart, inflating group and distinct counts. Guards that regression.
+#
+########################################################################
+
+--disable_warnings
+DROP TABLE IF EXISTS test_network_group;
+--enable_warnings
+
+CREATE TABLE test_network_group (
+    id INT PRIMARY KEY,
+    ip INET,
+    net CIDR
+);
+
+# Three distinct IPv4 INET values, each repeated across separately-encoded rows.
+INSERT INTO test_network_group VALUES
+    (1, '192.168.1.10', '192.168.1.0/24'),
+    (2, '192.168.1.10', '192.168.1.0/24'),
+    (3, '192.168.1.10', '192.168.1.0/24'),
+    (4, '10.0.0.1',     '10.0.0.0/8'),
+    (5, '10.0.0.1',     '10.0.0.0/8'),
+    (6, '172.16.5.4',   '172.16.0.0/12');
+
+# IPv6 rows (no padding byte; included for parity).
+INSERT INTO test_network_group VALUES
+    (7, '2001:db8::1', '2001:db8::/32'),
+    (8, '2001:db8::1', '2001:db8::/32');
+
+########################################################################
+# COUNT(DISTINCT): 3 distinct IPv4 + 1 distinct IPv6 = 4 for ip,
+#                  3 distinct IPv4 nets + 1 IPv6 net = 4 for net.
+########################################################################
+SELECT COUNT(DISTINCT ip) AS distinct_ip FROM test_network_group;
+SELECT COUNT(DISTINCT net) AS distinct_net FROM test_network_group;
+
+########################################################################
+# GROUP BY: equal values collapse to one row each, with correct counts.
+########################################################################
+SELECT ip, COUNT(*) AS n FROM test_network_group GROUP BY ip ORDER BY ip;
+SELECT net, COUNT(*) AS n FROM test_network_group GROUP BY net ORDER BY net;
+
+# Group count must equal the distinct-value count (not the row count).
+SELECT COUNT(*) AS ip_groups FROM (SELECT ip FROM test_network_group GROUP BY ip) g;
+SELECT COUNT(*) AS net_groups FROM (SELECT net FROM test_network_group GROUP BY net) g;
+
+DROP TABLE test_network_group;
+UNINSTALL EXTENSION vsql_network_address;
