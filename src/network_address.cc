@@ -31,7 +31,12 @@ namespace network_address {
 
 // Data structure definitions for network address types
 
-// IPv4 network address structure (7 bytes total)
+// IPv4 network address structure (7 meaningful bytes; sizeof is 8 due to a
+// trailing padding byte after `flags`, since `address` forces 4-byte alignment).
+// cmp_cidr compares only address+netmask, so any IPv4Network written to storage
+// MUST be zero-initialized ({}) — an uninitialized padding byte makes two equal
+// values differ at rest, so the server's binary hash fallback buckets them apart
+// (wrong GROUP BY / COUNT(DISTINCT)).
 struct IPv4Network {
   uint32_t address;  // 4 bytes - network byte order
   uint8_t netmask;   // 1 byte - CIDR prefix length
@@ -333,7 +338,7 @@ bool encode_cidr(unsigned char *buffer, size_t buffer_size, const char *from, si
   }
 
   // Try IPv4 first
-  IPv4Network net4;
+  IPv4Network net4{};
   if (parse_ipv4_address(addr_str, &net4.address)) {
     if (netmask < 0 || netmask > IPV4_MAX_PREFIXLEN) {
       return MarkInvalid(length);
@@ -450,7 +455,7 @@ bool encode_inet(unsigned char *buffer, size_t buffer_size, const char *from, si
   }
 
   // Try IPv4 first
-  IPv4Network net4;
+  IPv4Network net4{};
   if (parse_ipv4_address(addr_str, &net4.address)) {
     if (netmask == -1) {
       netmask = IPV4_MAX_PREFIXLEN; // Default for IPv4
@@ -942,7 +947,7 @@ bool inet_netmask(const unsigned char *buffer, size_t buffer_size,
     uint32_t netmask_addr = prefix_to_netmask_ipv4(net.netmask);
 
     // Create result as INET with the netmask address and /32
-    IPv4Network result;
+    IPv4Network result{};
     result.address = netmask_addr;
     result.netmask = 32;  // Netmask is always shown as /32
     result.family = AF_INET_VAL;
@@ -990,7 +995,7 @@ bool inet_hostmask(const unsigned char *buffer, size_t buffer_size,
     uint32_t hostmask_addr = prefix_to_hostmask_ipv4(net.netmask);
 
     // Create result as INET with the hostmask address and /32
-    IPv4Network result;
+    IPv4Network result{};
     result.address = hostmask_addr;
     result.netmask = 32;  // Hostmask is always shown as /32
     result.family = AF_INET_VAL;
@@ -1039,7 +1044,7 @@ bool inet_broadcast(const unsigned char *buffer, size_t buffer_size,
     uint32_t broadcast_addr = net.address | hostmask;
 
     // Create result as INET with the broadcast address and same netmask
-    IPv4Network result;
+    IPv4Network result{};
     result.address = broadcast_addr;
     result.netmask = net.netmask;
     result.family = AF_INET_VAL;
@@ -1093,7 +1098,7 @@ bool inet_network(const unsigned char *buffer, size_t buffer_size,
     uint32_t network_addr = net.address & netmask;
 
     // Create result as CIDR (strict network address)
-    IPv4Network result;
+    IPv4Network result{};
     result.address = network_addr;
     result.netmask = net.netmask;
     result.family = AF_INET_VAL;
@@ -1152,7 +1157,7 @@ bool inet_set_masklen(const unsigned char *buffer, size_t buffer_size,
     memcpy(&net, buffer, sizeof(IPv4Network));
 
     // Create result with same address but new netmask
-    IPv4Network result;
+    IPv4Network result{};
     result.address = net.address;
     result.netmask = new_masklen;
     result.family = AF_INET_VAL;
@@ -1211,7 +1216,7 @@ bool cidr_set_masklen(const unsigned char *buffer, size_t buffer_size,
     uint32_t network_addr = net.address & netmask;
 
     // Create result with network address and new netmask
-    IPv4Network result;
+    IPv4Network result{};
     result.address = network_addr;
     result.netmask = new_masklen;
     result.family = AF_INET_VAL;
@@ -1930,41 +1935,49 @@ VEF_GENERATE_ENTRY_POINTS(
                   .returns(CIDR)
                   .param(STRING)
                   .buffer_size(19)
+                  .deterministic()
                   .build())
         .func(make_func<&decode_cidr>("cidr_to_string")
                   .returns(STRING)
                   .param(CIDR)
                   .buffer_size(64)
+                  .deterministic()
                   .build())
         .func(make_func<&inet_from_string_vdf>("inet_from_string")
                   .returns(INET)
                   .param(STRING)
                   .buffer_size(19)
+                  .deterministic()
                   .build())
         .func(make_func<&decode_inet>("inet_to_string")
                   .returns(STRING)
                   .param(INET)
                   .buffer_size(64)
+                  .deterministic()
                   .build())
         .func(make_func<&macaddr_from_string_vdf>("macaddr_from_string")
                   .returns(MACADDR)
                   .param(STRING)
                   .buffer_size(6)
+                  .deterministic()
                   .build())
         .func(make_func<&decode_macaddr>("macaddr_to_string")
                   .returns(STRING)
                   .param(MACADDR)
                   .buffer_size(32)
+                  .deterministic()
                   .build())
         .func(make_func<&macaddr8_from_string_vdf>("macaddr8_from_string")
                   .returns(MACADDR8)
                   .param(STRING)
                   .buffer_size(8)
+                  .deterministic()
                   .build())
         .func(make_func<&decode_macaddr8>("macaddr8_to_string")
                   .returns(STRING)
                   .param(MACADDR8)
                   .buffer_size(32)
+                  .deterministic()
                   .build())
 
         // Comparison
@@ -1972,41 +1985,49 @@ VEF_GENERATE_ENTRY_POINTS(
                   .returns(INT)
                   .param(CIDR)
                   .param(CIDR)
+                  .deterministic()
                   .build())
         .func(make_func<&inet_compare_impl>("inet_compare")
                   .returns(INT)
                   .param(INET)
                   .param(INET)
+                  .deterministic()
                   .build())
         .func(make_func<&macaddr_compare_impl>("macaddr_compare")
                   .returns(INT)
                   .param(MACADDR)
                   .param(MACADDR)
+                  .deterministic()
                   .build())
         .func(make_func<&macaddr8_compare_impl>("macaddr8_compare")
                   .returns(INT)
                   .param(MACADDR8)
                   .param(MACADDR8)
+                  .deterministic()
                   .build())
 
         // Simple extractors
         .func(make_func<&inet_family_impl>("inet_family")
                   .returns(INT)
                   .param(INET)
+                  .deterministic()
                   .build())
         .func(make_func<&inet_masklen_impl>("inet_masklen")
                   .returns(INT)
                   .param(INET)
+                  .deterministic()
                   .build())
         .func(make_func<&inet_host_impl>("inet_host")
                   .returns(STRING)
                   .param(INET)
                   .buffer_size(64)
+                  .deterministic()
                   .build())
         .func(make_func<&inet_text_impl>("inet_text")
                   .returns(STRING)
                   .param(INET)
                   .buffer_size(64)
+                  .deterministic()
                   .build())
 
         // Mask calculations
@@ -2014,21 +2035,25 @@ VEF_GENERATE_ENTRY_POINTS(
                   .returns(INET)
                   .param(INET)
                   .buffer_size(19)
+                  .deterministic()
                   .build())
         .func(make_func<&inet_hostmask_impl>("inet_hostmask")
                   .returns(INET)
                   .param(INET)
                   .buffer_size(19)
+                  .deterministic()
                   .build())
         .func(make_func<&inet_broadcast_impl>("inet_broadcast")
                   .returns(INET)
                   .param(INET)
                   .buffer_size(19)
+                  .deterministic()
                   .build())
         .func(make_func<&inet_network_impl>("inet_network")
                   .returns(CIDR)
                   .param(INET)
                   .buffer_size(19)
+                  .deterministic()
                   .build())
 
         // Modifiers
@@ -2037,17 +2062,20 @@ VEF_GENERATE_ENTRY_POINTS(
                   .param(INET)
                   .param(INT)
                   .buffer_size(19)
+                  .deterministic()
                   .build())
         .func(make_func<&cidr_set_masklen_impl>("cidr_set_masklen")
                   .returns(CIDR)
                   .param(CIDR)
                   .param(INT)
                   .buffer_size(19)
+                  .deterministic()
                   .build())
         .func(make_func<&macaddr_trunc_impl>("macaddr_trunc")
                   .returns(MACADDR)
                   .param(MACADDR)
                   .buffer_size(6)
+                  .deterministic()
                   .build())
 
         // Formatting
@@ -2055,9 +2083,11 @@ VEF_GENERATE_ENTRY_POINTS(
                   .returns(STRING)
                   .param(INET)
                   .buffer_size(64)
+                  .deterministic()
                   .build())
         .func(make_func<&cidr_abbrev_impl>("cidr_abbrev")
                   .returns(STRING)
                   .param(CIDR)
                   .buffer_size(64)
+                  .deterministic()
                   .build()))
