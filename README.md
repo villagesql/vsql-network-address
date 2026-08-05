@@ -267,6 +267,25 @@ SELECT inet_to_string(ip_address) FROM hosts ORDER BY ip_address;
 SELECT macaddr_to_string(mac_address) FROM devices ORDER BY mac_address;
 ```
 
+### Generated Columns and CHECK Constraints
+
+Every function in this extension is registered as deterministic, so all of them can
+be used in generated columns and in `CHECK` constraints:
+
+```sql
+CREATE TABLE hosts (
+  ip_address INET NOT NULL,
+  masklen    INT AS (inet_masklen(ip_address)) STORED,
+  CHECK (inet_family(ip_address) = 4)
+);
+INSERT INTO hosts (ip_address) VALUES ('192.168.1.5/24');
+SELECT inet_to_string(ip_address), masklen FROM hosts;
+-- 192.168.1.5/24 | 24
+
+INSERT INTO hosts (ip_address) VALUES ('2001:db8::1/64');
+-- ERROR 3819 (HY000): Check constraint 'hosts_chk_1' is violated.
+```
+
 ## Testing
 
 The extension includes a comprehensive test suite using the MySQL Test Runner (MTR) framework:
