@@ -1,0 +1,80 @@
+INSTALL EXTENSION vsql_network_address;
+# inet_contains: /24 network strictly contains a host inside it
+SELECT
+inet_contains(inet_from_string('192.168.1.0/24'), inet_from_string('192.168.1.5')) AS net_contains_host,
+inet_contains(inet_from_string('192.168.1.0/24'), inet_from_string('192.168.2.5')) AS net_excludes_other,
+inet_contains(inet_from_string('10.0.0.0/8'), inet_from_string('10.20.30.0/24')) AS wide_contains_narrow,
+inet_contains(inet_from_string('10.20.30.0/24'), inet_from_string('10.0.0.0/8')) AS narrow_not_contains_wide;
+net_contains_host	net_excludes_other	wide_contains_narrow	narrow_not_contains_wide
+1	0	1	0
+# inet_contained_by: mirror image of inet_contains
+SELECT
+inet_contained_by(inet_from_string('192.168.1.5'), inet_from_string('192.168.1.0/24')) AS host_in_net,
+inet_contained_by(inet_from_string('192.168.2.5'), inet_from_string('192.168.1.0/24')) AS host_not_in_net,
+inet_contained_by(inet_from_string('10.20.30.0/24'), inet_from_string('10.0.0.0/8')) AS narrow_in_wide,
+inet_contained_by(inet_from_string('10.0.0.0/8'), inet_from_string('10.20.30.0/24')) AS wide_not_in_narrow;
+host_in_net	host_not_in_net	narrow_in_wide	wide_not_in_narrow
+1	0	1	0
+# Equal networks: strict variants false, or-equals variants true
+SELECT
+inet_contains(inet_from_string('192.168.1.0/24'), inet_from_string('192.168.1.0/24')) AS contains_strict_eq,
+inet_contains_or_equals(inet_from_string('192.168.1.0/24'), inet_from_string('192.168.1.0/24')) AS contains_oe_eq,
+inet_contained_by(inet_from_string('192.168.1.0/24'), inet_from_string('192.168.1.0/24')) AS contained_strict_eq,
+inet_contained_by_or_equals(inet_from_string('192.168.1.0/24'), inet_from_string('192.168.1.0/24')) AS contained_oe_eq;
+contains_strict_eq	contains_oe_eq	contained_strict_eq	contained_oe_eq
+0	1	0	1
+# Same masklen, same network bits, different host bits: only network parts count
+SELECT
+inet_contains(inet_from_string('192.168.1.5/24'), inet_from_string('192.168.1.9/24')) AS strict_same_len,
+inet_contains_or_equals(inet_from_string('192.168.1.5/24'), inet_from_string('192.168.1.9/24')) AS oe_same_len,
+inet_contained_by_or_equals(inet_from_string('192.168.1.5/24'), inet_from_string('192.168.1.9/24')) AS coe_same_len;
+strict_same_len	oe_same_len	coe_same_len
+0	1	1
+# Same masklen, different network bits: all variants false
+SELECT
+inet_contains_or_equals(inet_from_string('192.168.1.0/24'), inet_from_string('192.168.2.0/24')) AS oe_diff_net,
+inet_contained_by_or_equals(inet_from_string('192.168.1.0/24'), inet_from_string('192.168.2.0/24')) AS coe_diff_net;
+oe_diff_net	coe_diff_net
+0	0
+# inet_overlaps: true when either contains the other or equal, symmetric
+SELECT
+inet_overlaps(inet_from_string('10.0.0.0/8'), inet_from_string('10.20.30.0/24')) AS wide_narrow,
+inet_overlaps(inet_from_string('10.20.30.0/24'), inet_from_string('10.0.0.0/8')) AS narrow_wide,
+inet_overlaps(inet_from_string('192.168.1.0/24'), inet_from_string('192.168.1.0/24')) AS equal_nets,
+inet_overlaps(inet_from_string('192.168.1.0/24'), inet_from_string('192.168.2.0/24')) AS disjoint_nets;
+wide_narrow	narrow_wide	equal_nets	disjoint_nets
+1	1	1	0
+# IPv6 containment and overlap
+SELECT
+inet_contains(inet_from_string('2001:db8::/32'), inet_from_string('2001:db8::1')) AS v6_net_contains_host,
+inet_contains(inet_from_string('2001:db8::/32'), inet_from_string('2001:db9::1')) AS v6_net_excludes_other,
+inet_contained_by(inet_from_string('2001:db8:85a3::/48'), inet_from_string('2001:db8::/32')) AS v6_narrow_in_wide,
+inet_contains_or_equals(inet_from_string('2001:db8::/32'), inet_from_string('2001:db8::/32')) AS v6_oe_eq,
+inet_contains(inet_from_string('2001:db8::/32'), inet_from_string('2001:db8::/32')) AS v6_strict_eq,
+inet_overlaps(inet_from_string('fe80::/10'), inet_from_string('fe80::1')) AS v6_overlap,
+inet_overlaps(inet_from_string('2001:db8::/32'), inet_from_string('2001:db9::/32')) AS v6_disjoint;
+v6_net_contains_host	v6_net_excludes_other	v6_narrow_in_wide	v6_oe_eq	v6_strict_eq	v6_overlap	v6_disjoint
+1	0	1	1	0	1	0
+# IPv4 vs IPv6 always 0
+SELECT
+inet_contains(inet_from_string('0.0.0.0/0'), inet_from_string('2001:db8::1')) AS v4_contains_v6,
+inet_contains(inet_from_string('::/0'), inet_from_string('192.168.1.1')) AS v6_contains_v4,
+inet_contains_or_equals(inet_from_string('::/0'), inet_from_string('0.0.0.0/0')) AS oe_cross,
+inet_contained_by(inet_from_string('192.168.1.1'), inet_from_string('::/0')) AS cb_cross,
+inet_contained_by_or_equals(inet_from_string('2001:db8::1'), inet_from_string('0.0.0.0/0')) AS cboe_cross,
+inet_overlaps(inet_from_string('0.0.0.0/0'), inet_from_string('::/0')) AS overlap_cross;
+v4_contains_v6	v6_contains_v4	oe_cross	cb_cross	cboe_cross	overlap_cross
+0	0	0	0	0	0
+# NULL in either argument yields NULL
+SELECT
+inet_contains(NULL, inet_from_string('192.168.1.5')) AS null_a,
+inet_contains(inet_from_string('192.168.1.0/24'), NULL) AS null_b,
+inet_contains_or_equals(NULL, NULL) AS null_both,
+inet_contained_by(NULL, inet_from_string('192.168.1.0/24')) AS cb_null,
+inet_contained_by_or_equals(inet_from_string('192.168.1.5'), NULL) AS cboe_null,
+inet_overlaps(NULL, inet_from_string('10.0.0.0/8')) AS overlap_null;
+null_a	null_b	null_both	cb_null	cboe_null	overlap_null
+NULL	NULL	NULL	NULL	NULL	NULL
+SELECT inet_contains(cidr_from_string('10.0.0.0/8'), inet_from_string('10.1.2.3'));
+ERROR HY000: Cannot initialize function 'inet_contains': argument 1 type mismatch (expected vsql_network_address.INET, got vsql_network_address.CIDR)
+UNINSTALL EXTENSION vsql_network_address;

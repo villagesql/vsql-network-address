@@ -1133,6 +1133,133 @@ bool inet_network(const unsigned char *buffer, size_t buffer_size,
 }
 
 // ============================================================================
+// Containment Predicates
+// ============================================================================
+
+// Shared core for the containment predicates. Every predicate below only ever
+// compares address bits through min(a_masklen, b_masklen), so one prefix
+// comparison serves all five. Different address families are a valid input
+// (prefix_match = false), not an error, matching PostgreSQL.
+bool network_prefix_relation(const unsigned char *a_buf, size_t a_size,
+                             const unsigned char *b_buf, size_t b_size,
+                             bool *same_family, int *a_masklen, int *b_masklen,
+                             bool *prefix_match) {
+  uint8_t a_family = get_address_family(a_buf, a_size);
+  uint8_t b_family = get_address_family(b_buf, b_size);
+  if (a_family == 0 || b_family == 0) {
+    return true;  // Error: undecodable value
+  }
+
+  *a_masklen = inet_masklen(a_buf, a_size);
+  *b_masklen = inet_masklen(b_buf, b_size);
+  if (*a_masklen < 0 || *b_masklen < 0) {
+    return true;  // Error
+  }
+
+  *same_family = (a_family == b_family);
+  *prefix_match = false;
+  if (!*same_family) {
+    return false;  // Success: cross-family predicates are simply false
+  }
+
+  int min_bits = (*a_masklen < *b_masklen) ? *a_masklen : *b_masklen;
+
+  if (a_family == AF_INET_VAL) {
+    IPv4Network a_net, b_net;
+    memcpy(&a_net, a_buf, sizeof(IPv4Network));
+    memcpy(&b_net, b_buf, sizeof(IPv4Network));
+
+    uint32_t mask = prefix_to_netmask_ipv4(static_cast<uint8_t>(min_bits));
+    *prefix_match = ((a_net.address ^ b_net.address) & mask) == 0;
+  } else {
+    IPv6Network a_net, b_net;
+    memcpy(&a_net, a_buf, sizeof(IPv6Network));
+    memcpy(&b_net, b_buf, sizeof(IPv6Network));
+
+    uint8_t mask[16];
+    prefix_to_netmask_ipv6(static_cast<uint8_t>(min_bits), mask);
+
+    *prefix_match = true;
+    for (int i = 0; i < 16; i++) {
+      if ((a_net.address[i] ^ b_net.address[i]) & mask[i]) {
+        *prefix_match = false;
+        break;
+      }
+    }
+  }
+
+  return false;  // Success
+}
+
+// inet_contains: PostgreSQL a >> b (strict supernet)
+bool inet_contains(const unsigned char *a_buf, size_t a_size,
+                   const unsigned char *b_buf, size_t b_size, bool *result) {
+  bool same_family, prefix_match;
+  int a_masklen, b_masklen;
+  if (network_prefix_relation(a_buf, a_size, b_buf, b_size, &same_family,
+                              &a_masklen, &b_masklen, &prefix_match)) {
+    return true;  // Error
+  }
+  *result = same_family && a_masklen < b_masklen && prefix_match;
+  return false;  // Success
+}
+
+// inet_contains_or_equals: PostgreSQL a >>= b
+bool inet_contains_or_equals(const unsigned char *a_buf, size_t a_size,
+                             const unsigned char *b_buf, size_t b_size,
+                             bool *result) {
+  bool same_family, prefix_match;
+  int a_masklen, b_masklen;
+  if (network_prefix_relation(a_buf, a_size, b_buf, b_size, &same_family,
+                              &a_masklen, &b_masklen, &prefix_match)) {
+    return true;  // Error
+  }
+  *result = same_family && a_masklen <= b_masklen && prefix_match;
+  return false;  // Success
+}
+
+// inet_contained_by: PostgreSQL a << b (strict subnet)
+bool inet_contained_by(const unsigned char *a_buf, size_t a_size,
+                       const unsigned char *b_buf, size_t b_size,
+                       bool *result) {
+  bool same_family, prefix_match;
+  int a_masklen, b_masklen;
+  if (network_prefix_relation(a_buf, a_size, b_buf, b_size, &same_family,
+                              &a_masklen, &b_masklen, &prefix_match)) {
+    return true;  // Error
+  }
+  *result = same_family && a_masklen > b_masklen && prefix_match;
+  return false;  // Success
+}
+
+// inet_contained_by_or_equals: PostgreSQL a <<= b
+bool inet_contained_by_or_equals(const unsigned char *a_buf, size_t a_size,
+                                 const unsigned char *b_buf, size_t b_size,
+                                 bool *result) {
+  bool same_family, prefix_match;
+  int a_masklen, b_masklen;
+  if (network_prefix_relation(a_buf, a_size, b_buf, b_size, &same_family,
+                              &a_masklen, &b_masklen, &prefix_match)) {
+    return true;  // Error
+  }
+  *result = same_family && a_masklen >= b_masklen && prefix_match;
+  return false;  // Success
+}
+
+// inet_overlaps: PostgreSQL a && b (either contains the other, or equal)
+bool inet_overlaps(const unsigned char *a_buf, size_t a_size,
+                   const unsigned char *b_buf, size_t b_size, bool *result) {
+  bool same_family, prefix_match;
+  int a_masklen, b_masklen;
+  if (network_prefix_relation(a_buf, a_size, b_buf, b_size, &same_family,
+                              &a_masklen, &b_masklen, &prefix_match)) {
+    return true;  // Error
+  }
+  *result = same_family && prefix_match;
+  return false;  // Success
+}
+
+// ============================================================================
 // Modifiers
 // ============================================================================
 
@@ -1883,6 +2010,63 @@ void cidr_abbrev_impl(CustomArg arg, StringResult out) {
   out.set_length(str_len);
 }
 
+void inet_contains_impl(CustomArg a, CustomArg b, IntResult out) {
+  if (a.is_null() || b.is_null()) { out.set_null(); return; }
+  bool result;
+  if (network_address::inet_contains(span_data(a), span_size(a), span_data(b),
+                                     span_size(b), &result)) {
+    out.warning("inet_contains: error");
+    return;
+  }
+  out.set(result ? 1 : 0);
+}
+
+void inet_contains_or_equals_impl(CustomArg a, CustomArg b, IntResult out) {
+  if (a.is_null() || b.is_null()) { out.set_null(); return; }
+  bool result;
+  if (network_address::inet_contains_or_equals(
+          span_data(a), span_size(a), span_data(b), span_size(b), &result)) {
+    out.warning("inet_contains_or_equals: error");
+    return;
+  }
+  out.set(result ? 1 : 0);
+}
+
+void inet_contained_by_impl(CustomArg a, CustomArg b, IntResult out) {
+  if (a.is_null() || b.is_null()) { out.set_null(); return; }
+  bool result;
+  if (network_address::inet_contained_by(span_data(a), span_size(a),
+                                         span_data(b), span_size(b),
+                                         &result)) {
+    out.warning("inet_contained_by: error");
+    return;
+  }
+  out.set(result ? 1 : 0);
+}
+
+void inet_contained_by_or_equals_impl(CustomArg a, CustomArg b,
+                                      IntResult out) {
+  if (a.is_null() || b.is_null()) { out.set_null(); return; }
+  bool result;
+  if (network_address::inet_contained_by_or_equals(
+          span_data(a), span_size(a), span_data(b), span_size(b), &result)) {
+    out.warning("inet_contained_by_or_equals: error");
+    return;
+  }
+  out.set(result ? 1 : 0);
+}
+
+void inet_overlaps_impl(CustomArg a, CustomArg b, IntResult out) {
+  if (a.is_null() || b.is_null()) { out.set_null(); return; }
+  bool result;
+  if (network_address::inet_overlaps(span_data(a), span_size(a), span_data(b),
+                                     span_size(b), &result)) {
+    out.warning("inet_overlaps: error");
+    return;
+  }
+  out.set(result ? 1 : 0);
+}
+
 // =============================================================================
 // Type descriptors (constexpr — evaluated before VEF_GENERATE_ENTRY_POINTS)
 // =============================================================================
@@ -2003,6 +2187,38 @@ VEF_GENERATE_ENTRY_POINTS(
                   .returns(INT)
                   .param(MACADDR8)
                   .param(MACADDR8)
+                  .deterministic()
+                  .build())
+
+        // Containment predicates (PostgreSQL >>, >>=, <<, <<=, &&)
+        .func(make_func<&inet_contains_impl>("inet_contains")
+                  .returns(INT)
+                  .param(INET)
+                  .param(INET)
+                  .deterministic()
+                  .build())
+        .func(make_func<&inet_contains_or_equals_impl>("inet_contains_or_equals")
+                  .returns(INT)
+                  .param(INET)
+                  .param(INET)
+                  .deterministic()
+                  .build())
+        .func(make_func<&inet_contained_by_impl>("inet_contained_by")
+                  .returns(INT)
+                  .param(INET)
+                  .param(INET)
+                  .deterministic()
+                  .build())
+        .func(make_func<&inet_contained_by_or_equals_impl>("inet_contained_by_or_equals")
+                  .returns(INT)
+                  .param(INET)
+                  .param(INET)
+                  .deterministic()
+                  .build())
+        .func(make_func<&inet_overlaps_impl>("inet_overlaps")
+                  .returns(INT)
+                  .param(INET)
+                  .param(INET)
                   .deterministic()
                   .build())
 
