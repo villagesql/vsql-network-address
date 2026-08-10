@@ -12,13 +12,19 @@ A comprehensive network address extension for VillageSQL Server providing Postgr
 
 ## Installation
 
-### Option 1: Install Pre-built VEB Package
-1. Download the `vsql-network-address.veb` package from releases
-2. Install the VEB package to your VillageSQL instance
+If you installed VillageSQL with the install script, the Docker image, or a
+release tarball, `vsql_network_address.veb` is already in the server's `lib/veb/`
+directory. There is nothing to download — just install it:
 
-### Option 2: Build from Source
+```sql
+INSTALL EXTENSION vsql_network_address;
+```
 
-#### Prerequisites
+If you built the server from source yourself, `lib/veb/` will not have it unless
+you built the bundled extensions as well. Build from source in that case, or to
+work on the extension itself.
+
+### Prerequisites
 - VillageSQL build directory
 - CMake 3.16 or higher
 - C++17 compatible compiler
@@ -26,7 +32,7 @@ A comprehensive network address extension for VillageSQL Server providing Postgr
 
 📚 **Full Documentation**: Visit [villagesql.com/docs](https://villagesql.com/docs) for comprehensive guides on building extensions, architecture details, and more.
 
-#### Build Instructions
+### Build Instructions
 1. Clone the repository:
    ```bash
    git clone https://github.com/villagesql/vsql-network-address.git
@@ -40,15 +46,15 @@ A comprehensive network address extension for VillageSQL Server providing Postgr
    mkdir -p build
    cd build
    cmake .. -DVillageSQL_BUILD_DIR=$HOME/build/villagesql
-   make -j $(($(getconf _NPROCESSORS_ONLN) - 2))
+   make -j $(getconf _NPROCESSORS_ONLN)
    ```
 
    **macOS:**
    ```bash
    mkdir -p build
    cd build
-   cmake .. -DVillageSQL_BUILD_DIR=~/build/villagesql
-   make -j $(($(getconf _NPROCESSORS_ONLN) - 2))
+   cmake .. -DVillageSQL_BUILD_DIR="$HOME/build/villagesql"
+   make -j $(getconf _NPROCESSORS_ONLN)
    ```
 
    This will create the `vsql-network-address.veb` package in the build directory and automatically configure the VEB install directory to point to VillageSQL's `veb_output_directory`.
@@ -101,8 +107,10 @@ INSERT INTO networks VALUES (2, cidr_from_string('10.0.0.0/8'));
 INSERT INTO networks VALUES (3, cidr_from_string('2001:db8::/32'));
 INSERT INTO networks VALUES (4, cidr_from_string('fe80::/64'));
 
--- This would fail: '192.168.1.5/24' (host bits set)
--- This would also fail: '2001:db8::1/64' (host bits set)
+-- These return NULL with Warning 3200 rather than failing the statement:
+--   '192.168.1.5/24'  (host bits set)
+--   '2001:db8::1/64'  (host bits set)
+-- The row still inserts, with a NULL value, unless the column is NOT NULL.
 ```
 
 #### MACADDR Type
@@ -195,9 +203,9 @@ Calculate network masks and addresses:
 
 ```sql
 -- IPv4 examples
-SELECT inet_to_string(inet_netmask(inet_from_string('192.168.1.5/24')));    -- Returns: '255.255.255.0/32'
-SELECT inet_to_string(inet_hostmask(inet_from_string('192.168.1.5/24')));   -- Returns: '0.0.0.255/32'
-SELECT inet_to_string(inet_broadcast(inet_from_string('192.168.1.5/24')));  -- Returns: '192.168.1.255/32'
+SELECT inet_to_string(inet_netmask(inet_from_string('192.168.1.5/24')));    -- Returns: '255.255.255.0'
+SELECT inet_to_string(inet_hostmask(inet_from_string('192.168.1.5/24')));   -- Returns: '0.0.0.255'
+SELECT inet_to_string(inet_broadcast(inet_from_string('192.168.1.5/24')));  -- Returns: '192.168.1.255/24'
 SELECT cidr_to_string(inet_network(inet_from_string('192.168.1.5/24')));    -- Returns: '192.168.1.0/24'
 
 -- IPv6 examples
@@ -377,14 +385,14 @@ VillageSQL welcomes contributions from the community. Please ensure all tests pa
    ```bash
    mkdir -p build && cd build
    cmake .. -DVillageSQL_BUILD_DIR=$HOME/build/villagesql
-   make -j $(($(getconf _NPROCESSORS_ONLN) - 2)) && make install
+   make -j $(getconf _NPROCESSORS_ONLN) && make install
    ```
 
    **macOS:**
    ```bash
    mkdir -p build && cd build
-   cmake .. -DVillageSQL_BUILD_DIR=~/build/villagesql
-   make -j $(($(getconf _NPROCESSORS_ONLN) - 2)) && make install
+   cmake .. -DVillageSQL_BUILD_DIR="$HOME/build/villagesql"
+   make -j $(getconf _NPROCESSORS_ONLN) && make install
    ```
 
 2. Run the test suite:
