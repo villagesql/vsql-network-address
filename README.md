@@ -6,6 +6,7 @@ A comprehensive network address extension for VillageSQL Server providing Postgr
 
 - **Complete Network Address Support**: IPv4, IPv6, MAC addresses (6-byte and 8-byte EUI-64)
 - **PostgreSQL Compatibility**: Drop-in replacement for PostgreSQL's network address types
+- **Containment Predicates**: PostgreSQL's `>>`, `>>=`, `<<`, `<<=` and `&&` subnet tests as functions on `INET`
 - **Four Custom Types**: INET (IP with optional netmask), CIDR (strict network addresses), MACADDR (6-byte MAC), MACADDR8 (8-byte MAC)
 - **Validation & Conversion**: Comprehensive parsing and formatting for all address types
 - **Optimized C++ implementation** with binary storage
@@ -240,6 +241,41 @@ SELECT inet_abbrev(inet_from_string('192.168.1.5/24'));   -- Returns: '192.168.1
 SELECT cidr_abbrev(cidr_from_string('10.0.0.0/8'));       -- Returns: '10/8'
 SELECT cidr_abbrev(cidr_from_string('192.168.0.0/16'));   -- Returns: '192.168/16'
 ```
+
+#### Containment Predicates
+Test whether one network contains another. Each takes two INET values and
+returns 1, 0, or NULL:
+
+- `inet_contains(a, b)` - PostgreSQL `a >> b`: `a` is the wider network and `b` is inside it
+- `inet_contains_or_equals(a, b)` - PostgreSQL `a >>= b`
+- `inet_contained_by(a, b)` - PostgreSQL `a << b`: `a` is inside the wider network `b`
+- `inet_contained_by_or_equals(a, b)` - PostgreSQL `a <<= b`
+- `inet_overlaps(a, b)` - PostgreSQL `a && b`: either network contains the other, or they are equal
+
+```sql
+SELECT inet_contained_by(inet_from_string('192.168.1.5'),
+                         inet_from_string('192.168.1.0/24'));   -- Returns: 1
+SELECT inet_contains(inet_from_string('10.0.0.0/8'),
+                     inet_from_string('10.20.30.0/24'));        -- Returns: 1
+SELECT inet_contains(inet_from_string('192.168.1.0/24'),
+                     inet_from_string('192.168.1.0/24'));       -- Returns: 0
+SELECT inet_contains_or_equals(inet_from_string('192.168.1.0/24'),
+                               inet_from_string('192.168.1.0/24')); -- Returns: 1
+SELECT inet_overlaps(inet_from_string('fe80::/10'),
+                     inet_from_string('fe80::1'));              -- Returns: 1
+```
+
+Only the network parts are compared, through the shorter of the two prefix
+lengths. Comparing an IPv4 value with an IPv6 one returns 0 rather than an
+error, matching PostgreSQL. A NULL argument yields NULL.
+
+Both arguments must be INET. A CIDR value is not coerced:
+
+```text
+ERROR 3219 (HY000): Cannot initialize function 'inet_contains': argument 1 type mismatch (expected vsql_network_address.INET, got vsql_network_address.CIDR)
+```
+
+Use `inet_from_string()` on the network instead.
 
 ### Supported Formats
 
