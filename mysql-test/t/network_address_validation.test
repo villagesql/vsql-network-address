@@ -213,6 +213,21 @@ FROM test_network_validation WHERE id >= 200 ORDER BY id;
 SELECT COUNT(*) as boundary_records FROM test_network_validation WHERE id >= 200;
 
 ########################################################################
+# Exception-guard regression: encode_cidr/encode_inet/encode_macaddr/
+# encode_macaddr8 (the type-conversion entry points, reached both via the
+# CAST/column-typed path and the standalone *_from_string() VDFs) are now
+# wrapped in try/catch since the underlying std::string construction and
+# parse_mac_address() helper can throw. This confirms ordinary valid and
+# invalid input still parse/reject correctly through the guard.
+########################################################################
+SELECT cidr_to_string(cidr_from_string('192.168.1.0/24')) AS cidr_ok;
+SELECT inet_to_string(inet_from_string('10.0.0.1')) AS inet_ok;
+SELECT macaddr_to_string(macaddr_from_string('08:00:27:12:34:56')) AS mac_ok;
+SELECT macaddr8_to_string(macaddr8_from_string('08:00:27:12:34:56:78:9a')) AS mac8_ok;
+SELECT cidr_from_string('not-a-cidr') IS NULL AS cidr_invalid_is_null;
+SELECT macaddr_from_string('not-a-mac') IS NULL AS mac_invalid_is_null;
+
+########################################################################
 # Cleanup
 ########################################################################
 
