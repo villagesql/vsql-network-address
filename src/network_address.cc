@@ -324,7 +324,22 @@ bool MarkInvalid(size_t *length) {
 
 } // namespace
 
+bool encode_cidr_impl(unsigned char *buffer, size_t buffer_size, const char *from, size_t from_len, size_t *length);
+
 bool encode_cidr(unsigned char *buffer, size_t buffer_size, const char *from, size_t from_len, size_t *length) {
+  try {
+    return encode_cidr_impl(buffer, buffer_size, from, from_len, length);
+  } catch (...) {
+    // std::string construction / std::string_view parsing above can throw
+    // (bad_alloc, length_error); the SDK does not catch at the VDF entry-point
+    // boundary, so an escaping exception here would crash the whole server
+    // rather than fail just this one value. Report it the same way any other
+    // unparseable input is reported.
+    return MarkInvalid(length);
+  }
+}
+
+bool encode_cidr_impl(unsigned char *buffer, size_t buffer_size, const char *from, size_t from_len, size_t *length) {
   if (buffer_size < sizeof(IPv4Network) || nullptr == buffer) {
     return true;
   }
@@ -438,7 +453,17 @@ bool decode_cidr(const unsigned char *buffer, size_t buffer_size, char *to, size
   return true; // Unknown family
 }
 
+bool encode_inet_impl(unsigned char *buffer, size_t buffer_size, const char *from, size_t from_len, size_t *length);
+
 bool encode_inet(unsigned char *buffer, size_t buffer_size, const char *from, size_t from_len, size_t *length) {
+  try {
+    return encode_inet_impl(buffer, buffer_size, from, from_len, length);
+  } catch (...) {
+    return MarkInvalid(length);
+  }
+}
+
+bool encode_inet_impl(unsigned char *buffer, size_t buffer_size, const char *from, size_t from_len, size_t *length) {
   if (buffer_size < sizeof(IPv4Network) || nullptr == buffer) {
     return true;
   }
@@ -559,7 +584,17 @@ bool decode_inet(const unsigned char *buffer, size_t buffer_size, char *to, size
   return true; // Unknown family
 }
 
+bool encode_macaddr_impl(unsigned char *buffer, size_t buffer_size, const char *from, size_t from_len, size_t *length);
+
 bool encode_macaddr(unsigned char *buffer, size_t buffer_size, const char *from, size_t from_len, size_t *length) {
+  try {
+    return encode_macaddr_impl(buffer, buffer_size, from, from_len, length);
+  } catch (...) {
+    return MarkInvalid(length);
+  }
+}
+
+bool encode_macaddr_impl(unsigned char *buffer, size_t buffer_size, const char *from, size_t from_len, size_t *length) {
   if (buffer_size < sizeof(MacAddr) || nullptr == buffer) {
     return true;
   }
@@ -594,7 +629,17 @@ bool decode_macaddr(const unsigned char *buffer, size_t buffer_size, char *to, s
   return false;
 }
 
+bool encode_macaddr8_impl(unsigned char *buffer, size_t buffer_size, const char *from, size_t from_len, size_t *length);
+
 bool encode_macaddr8(unsigned char *buffer, size_t buffer_size, const char *from, size_t from_len, size_t *length) {
+  try {
+    return encode_macaddr8_impl(buffer, buffer_size, from, from_len, length);
+  } catch (...) {
+    return MarkInvalid(length);
+  }
+}
+
+bool encode_macaddr8_impl(unsigned char *buffer, size_t buffer_size, const char *from, size_t from_len, size_t *length) {
   if (buffer_size < sizeof(MacAddr8) || nullptr == buffer) {
     return true;
   }

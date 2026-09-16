@@ -169,5 +169,27 @@ id	cidr_col	inet_col	mac_col	mac8_col
 SELECT COUNT(*) as boundary_records FROM test_network_validation WHERE id >= 200;
 boundary_records
 7
+SELECT cidr_to_string(cidr_from_string('192.168.1.0/24')) AS cidr_ok;
+cidr_ok
+192.168.1.0/24
+SELECT inet_to_string(inet_from_string('10.0.0.1')) AS inet_ok;
+inet_ok
+10.0.0.1
+SELECT macaddr_to_string(macaddr_from_string('08:00:27:12:34:56')) AS mac_ok;
+mac_ok
+08:00:27:12:34:56
+SELECT macaddr8_to_string(macaddr8_from_string('08:00:27:12:34:56:78:9a')) AS mac8_ok;
+mac8_ok
+08:00:27:12:34:56:78:9a
+SELECT cidr_from_string('not-a-cidr') IS NULL AS cidr_invalid_is_null;
+cidr_invalid_is_null
+1
+Warnings:
+Warning	3200	VDF error in function 'cidr_from_string': failed to parse string 'not-a-cidr'
+SELECT macaddr_from_string('not-a-mac') IS NULL AS mac_invalid_is_null;
+mac_invalid_is_null
+1
+Warnings:
+Warning	3200	VDF error in function 'macaddr_from_string': failed to parse string 'not-a-mac'
 DROP TABLE test_network_validation;
 UNINSTALL EXTENSION vsql_network_address;
