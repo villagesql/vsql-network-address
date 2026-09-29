@@ -40,4 +40,33 @@ SELECT COUNT(*) AS net_groups FROM (SELECT net FROM test_network_group GROUP BY 
 net_groups
 4
 DROP TABLE test_network_group;
+CREATE TABLE test_mac_group (
+id INT PRIMARY KEY,
+mac MACADDR,
+mac8 MACADDR8
+);
+INSERT INTO test_mac_group VALUES
+(1, '08:00:2b:01:02:03', '08:00:2b:01:02:03:04:05'),
+(2, '08:00:2b:01:02:03', '08:00:2b:01:02:03:04:05'),
+(3, '08:00:2b:01:02:03', '08:00:2b:01:02:03:04:05'),
+(4, 'aa:bb:cc:dd:ee:ff', 'aa:bb:cc:dd:ee:ff:00:11'),
+(5, 'aa:bb:cc:dd:ee:ff', 'aa:bb:cc:dd:ee:ff:00:11'),
+(6, '00:11:22:33:44:55', '00:11:22:33:44:55:66:77');
+SELECT COUNT(DISTINCT mac) AS distinct_mac FROM test_mac_group;
+distinct_mac
+3
+SELECT COUNT(DISTINCT mac8) AS distinct_mac8 FROM test_mac_group;
+distinct_mac8
+3
+SELECT mac, COUNT(*) AS n FROM test_mac_group GROUP BY mac ORDER BY mac;
+mac	n
+00:11:22:33:44:55	1
+08:00:2b:01:02:03	3
+aa:bb:cc:dd:ee:ff	2
+SELECT mac8, COUNT(*) AS n FROM test_mac_group GROUP BY mac8 ORDER BY mac8;
+mac8	n
+00:11:22:33:44:55:66:77	1
+08:00:2b:01:02:03:04:05	3
+aa:bb:cc:dd:ee:ff:00:11	2
+DROP TABLE test_mac_group;
 UNINSTALL EXTENSION vsql_network_address;

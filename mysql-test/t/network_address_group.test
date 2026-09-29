@@ -60,4 +60,35 @@ SELECT COUNT(*) AS ip_groups FROM (SELECT ip FROM test_network_group GROUP BY ip
 SELECT COUNT(*) AS net_groups FROM (SELECT net FROM test_network_group GROUP BY net) g;
 
 DROP TABLE test_network_group;
+
+########################################################################
+# MACADDR / MACADDR8: same grouping-correctness guarantee, now backed by
+# .hash<>() as well (previously relied only on the server's raw-byte
+# fallback hash, which happens to work here since both types have no
+# padding, but a real hash function is the direct fix rather than an
+# accident of layout).
+########################################################################
+
+CREATE TABLE test_mac_group (
+    id INT PRIMARY KEY,
+    mac MACADDR,
+    mac8 MACADDR8
+);
+
+INSERT INTO test_mac_group VALUES
+    (1, '08:00:2b:01:02:03', '08:00:2b:01:02:03:04:05'),
+    (2, '08:00:2b:01:02:03', '08:00:2b:01:02:03:04:05'),
+    (3, '08:00:2b:01:02:03', '08:00:2b:01:02:03:04:05'),
+    (4, 'aa:bb:cc:dd:ee:ff', 'aa:bb:cc:dd:ee:ff:00:11'),
+    (5, 'aa:bb:cc:dd:ee:ff', 'aa:bb:cc:dd:ee:ff:00:11'),
+    (6, '00:11:22:33:44:55', '00:11:22:33:44:55:66:77');
+
+# 3 distinct MACADDR values, 3 distinct MACADDR8 values.
+SELECT COUNT(DISTINCT mac) AS distinct_mac FROM test_mac_group;
+SELECT COUNT(DISTINCT mac8) AS distinct_mac8 FROM test_mac_group;
+
+SELECT mac, COUNT(*) AS n FROM test_mac_group GROUP BY mac ORDER BY mac;
+SELECT mac8, COUNT(*) AS n FROM test_mac_group GROUP BY mac8 ORDER BY mac8;
+
+DROP TABLE test_mac_group;
 UNINSTALL EXTENSION vsql_network_address;
