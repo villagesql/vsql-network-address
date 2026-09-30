@@ -22,8 +22,10 @@
 #include <cstdint>
 #include <cstdlib>
 #include <cstring>
+#include <functional>
 #include <stdio.h>
 #include <string>
+#include <string_view>
 
 using namespace ::vsql;
 
@@ -763,6 +765,56 @@ int cmp_macaddr8(const unsigned char *data1, size_t len1, const unsigned char *d
   int result = memcmp(mac1.address, mac2.address, 8);
   if (result == 0) return 0;
   return (result < 0) ? -1 : 1;
+}
+
+// Hash functions for each type. Each hashes EXACTLY the fields its cmp_*
+// counterpart compares, and nothing else -- family and flags are excluded
+// here the same way cmp_cidr ignores them, and this also closes a real gap
+// in the server's own binary-hash fallback: that fallback hashes every
+// persisted byte, including the trailing padding byte after `flags` (see the
+// IPv4Network comment above), so a caller that forgot to zero-initialize a
+// value could make two values that compare equal hash unequal. Hashing only
+// address+netmask here is immune to that regardless of padding discipline.
+static size_t hash_combine(size_t seed, size_t v) {
+  return seed ^ (v + 0x9e3779b9 + (seed << 6) + (seed >> 2));
+}
+
+size_t hash_cidr(const unsigned char *data, size_t len) {
+  if (len == sizeof(IPv4Network)) {
+    IPv4Network net;
+    memcpy(&net, data, sizeof(IPv4Network));
+    size_t h = std::hash<uint32_t>{}(net.address);
+    return hash_combine(h, std::hash<uint8_t>{}(net.netmask));
+  } else if (len == sizeof(IPv6Network)) {
+    IPv6Network net;
+    memcpy(&net, data, sizeof(IPv6Network));
+    size_t h = std::hash<std::string_view>{}(std::string_view(
+        reinterpret_cast<const char *>(net.address), sizeof(net.address)));
+    return hash_combine(h, std::hash<uint8_t>{}(net.netmask));
+  }
+  // Unrecognized length: every persisted_length(19) value should match one of
+  // the two branches above, so this is unreachable in practice. Hash the
+  // whole span rather than crash.
+  return std::hash<std::string_view>{}(
+      std::string_view(reinterpret_cast<const char *>(data), len));
+}
+
+size_t hash_macaddr(const unsigned char *data, size_t len) {
+  (void)len;
+  assert(sizeof(MacAddr) == len);
+  MacAddr mac;
+  memcpy(&mac, data, sizeof(MacAddr));
+  return std::hash<std::string_view>{}(
+      std::string_view(reinterpret_cast<const char *>(mac.address), 6));
+}
+
+size_t hash_macaddr8(const unsigned char *data, size_t len) {
+  (void)len;
+  assert(sizeof(MacAddr8) == len);
+  MacAddr8 mac;
+  memcpy(&mac, data, sizeof(MacAddr8));
+  return std::hash<std::string_view>{}(
+      std::string_view(reinterpret_cast<const char *>(mac.address), 8));
 }
 
 // ============================================================================
@@ -1633,6 +1685,11 @@ int cmp_cidr(CustomArg a, CustomArg b) {
       sb.data(), sb.size());
 }
 
+size_t hash_cidr(CustomArg a) {
+  auto sa = a.value();
+  return network_address::hash_cidr(sa.data(), sa.size());
+}
+
 // --- INET ---
 void encode_inet(std::string_view from, CustomResult out) {
   auto buf = out.buffer();
@@ -1668,6 +1725,13 @@ int cmp_inet(CustomArg a, CustomArg b) {
   return network_address::cmp_inet(
       sa.data(), sa.size(),
       sb.data(), sb.size());
+}
+
+// INET shares CIDR's persisted layout and comparison (cmp_inet delegates to
+// cmp_cidr above), so it must share its hash too.
+size_t hash_inet(CustomArg a) {
+  auto sa = a.value();
+  return network_address::hash_cidr(sa.data(), sa.size());
 }
 
 // --- MACADDR ---
@@ -1707,6 +1771,11 @@ int cmp_macaddr(CustomArg a, CustomArg b) {
       sb.data(), sb.size());
 }
 
+size_t hash_macaddr(CustomArg a) {
+  auto sa = a.value();
+  return network_address::hash_macaddr(sa.data(), sa.size());
+}
+
 // --- MACADDR8 ---
 void encode_macaddr8(std::string_view from, CustomResult out) {
   auto buf = out.buffer();
@@ -1742,6 +1811,11 @@ int cmp_macaddr8(CustomArg a, CustomArg b) {
   return network_address::cmp_macaddr8(
       sa.data(), sa.size(),
       sb.data(), sb.size());
+}
+
+size_t hash_macaddr8(CustomArg a) {
+  auto sa = a.value();
+  return network_address::hash_macaddr8(sa.data(), sa.size());
 }
 
 // VDF wrappers for the from_string conversions: StringArg → CustomResult.
@@ -2122,6 +2196,7 @@ constexpr auto CIDR = make_type<kCidrTypeName>()
                           .from_string<&encode_cidr>()
                           .to_string<&decode_cidr>()
                           .compare<&cmp_cidr>()
+                          .hash<&hash_cidr>()
                           .intrinsic_default_str("::/0")
                           .build();
 
@@ -2131,6 +2206,7 @@ constexpr auto INET = make_type<kInetTypeName>()
                           .from_string<&encode_inet>()
                           .to_string<&decode_inet>()
                           .compare<&cmp_inet>()
+                          .hash<&hash_inet>()
                           .intrinsic_default_str("::")
                           .build();
 
@@ -2140,6 +2216,7 @@ constexpr auto MACADDR = make_type<kMacaddrTypeName>()
                              .from_string<&encode_macaddr>()
                              .to_string<&decode_macaddr>()
                              .compare<&cmp_macaddr>()
+                             .hash<&hash_macaddr>()
                              .intrinsic_default_str("00:00:00:00:00:00")
                              .build();
 
@@ -2149,6 +2226,7 @@ constexpr auto MACADDR8 = make_type<kMacaddr8TypeName>()
                               .from_string<&encode_macaddr8>()
                               .to_string<&decode_macaddr8>()
                               .compare<&cmp_macaddr8>()
+                              .hash<&hash_macaddr8>()
                               .intrinsic_default_str("00:00:00:00:00:00:00:00")
                               .build();
 
