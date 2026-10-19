@@ -1655,7 +1655,7 @@ void encode_cidr(std::string_view from, CustomResult out) {
   if (network_address::encode_cidr(
           buf.data(), buf.size(),
           from.data(), from.size(), &length)) {
-    out.error("invalid CIDR address");
+    out.warning("invalid CIDR address");
     return;
   }
   out.set_length(length);
@@ -1697,7 +1697,7 @@ void encode_inet(std::string_view from, CustomResult out) {
   if (network_address::encode_inet(
           buf.data(), buf.size(),
           from.data(), from.size(), &length)) {
-    out.error("invalid INET address");
+    out.warning("invalid INET address");
     return;
   }
   out.set_length(length);
@@ -1741,7 +1741,7 @@ void encode_macaddr(std::string_view from, CustomResult out) {
   if (network_address::encode_macaddr(
           buf.data(), buf.size(),
           from.data(), from.size(), &length)) {
-    out.error("invalid MAC address");
+    out.warning("invalid MAC address");
     return;
   }
   out.set_length(length);
@@ -1783,7 +1783,7 @@ void encode_macaddr8(std::string_view from, CustomResult out) {
   if (network_address::encode_macaddr8(
           buf.data(), buf.size(),
           from.data(), from.size(), &length)) {
-    out.error("invalid MAC address (EUI-64)");
+    out.warning("invalid MAC address (EUI-64)");
     return;
   }
   out.set_length(length);
@@ -1820,8 +1820,8 @@ size_t hash_macaddr8(CustomArg a) {
 
 // VDF wrappers for the from_string conversions: StringArg → CustomResult.
 // These use .warning() (→ NULL) on invalid input, matching PostgreSQL behavior.
-// The type-level encode_* functions use .error() (hard error) so that
-// INSERT with invalid data fails rather than silently storing NULL.
+// The type-level encode_* functions also use .warning(): a bad value gets
+// the standard 1366 handling, which strict mode promotes to an error.
 // Helper: build "failed to parse string 'X'" message matching V1 format.
 static std::string parse_error_msg(std::string_view input) {
   std::string msg = "failed to parse string '";
