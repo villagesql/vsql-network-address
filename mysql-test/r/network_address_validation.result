@@ -191,5 +191,17 @@ mac_invalid_is_null
 1
 Warnings:
 Warning	3200	VDF error in function 'macaddr_from_string': failed to parse string 'not-a-mac'
+# Bad values stored into columns are rejected with 1366
+INSERT INTO test_network_validation (id, cidr_col) VALUES (300, 'not-a-cidr');
+ERROR HY000: Incorrect CIDR value: 'not-a-cidr' for column 'cidr_col' at row 1
+INSERT INTO test_network_validation (id, inet_col) VALUES (301, 'not-an-inet');
+ERROR HY000: Incorrect INET value: 'not-an-inet' for column 'inet_col' at row 1
+INSERT INTO test_network_validation (id, mac_col) VALUES (302, 'not-a-mac');
+ERROR HY000: Incorrect MACADDR value: 'not-a-mac' for column 'mac_col' at row 1
+INSERT INTO test_network_validation (id, mac8_col) VALUES (303, 'not-a-mac8');
+ERROR HY000: Incorrect MACADDR8 value: 'not-a-mac8' for column 'mac8_col' at row 1
+SELECT COUNT(*) AS bad_value_rows FROM test_network_validation WHERE id >= 300;
+bad_value_rows
+0
 DROP TABLE test_network_validation;
 UNINSTALL EXTENSION vsql_network_address;

@@ -228,6 +228,21 @@ SELECT cidr_from_string('not-a-cidr') IS NULL AS cidr_invalid_is_null;
 SELECT macaddr_from_string('not-a-mac') IS NULL AS mac_invalid_is_null;
 
 ########################################################################
+# A bad string stored directly into a column is a bad value for the type:
+# the standard 1366 error in strict mode, like a built-in type.
+########################################################################
+--echo # Bad values stored into columns are rejected with 1366
+--error ER_TRUNCATED_WRONG_VALUE_FOR_FIELD
+INSERT INTO test_network_validation (id, cidr_col) VALUES (300, 'not-a-cidr');
+--error ER_TRUNCATED_WRONG_VALUE_FOR_FIELD
+INSERT INTO test_network_validation (id, inet_col) VALUES (301, 'not-an-inet');
+--error ER_TRUNCATED_WRONG_VALUE_FOR_FIELD
+INSERT INTO test_network_validation (id, mac_col) VALUES (302, 'not-a-mac');
+--error ER_TRUNCATED_WRONG_VALUE_FOR_FIELD
+INSERT INTO test_network_validation (id, mac8_col) VALUES (303, 'not-a-mac8');
+SELECT COUNT(*) AS bad_value_rows FROM test_network_validation WHERE id >= 300;
+
+########################################################################
 # Cleanup
 ########################################################################
 
