@@ -420,13 +420,9 @@ bool decode_cidr(const unsigned char *buffer, size_t buffer_size, char *to, size
     char addr_str[32];
     format_ipv4_address(net.address, addr_str, sizeof(addr_str));
 
-    char result[64];
-    snprintf(result, sizeof(result), "%s/%u", addr_str,
-             (unsigned int)net.netmask);
-
-    size_t len = strlen(result);
-    if (len + 1 > to_size) return true;
-    strcpy(to, result);
+    int len = snprintf(to, to_size, "%s/%u", addr_str,
+                       (unsigned int)net.netmask);
+    if (len < 0 || static_cast<size_t>(len) >= to_size) return true;
     *to_length = len;
     return false;
 
@@ -440,13 +436,9 @@ bool decode_cidr(const unsigned char *buffer, size_t buffer_size, char *to, size
       char addr_str[kMaxIPv6String];
       format_ipv6_address(net.address, addr_str, sizeof(addr_str));
 
-      char result[kMaxIPv6String];
-      snprintf(result, sizeof(result), "%s/%u", addr_str,
-               (unsigned int)net.netmask);
-
-      size_t len = strlen(result);
-      if (len + 1 > to_size) return true;
-      strcpy(to, result);
+      int len = snprintf(to, to_size, "%s/%u", addr_str,
+                         (unsigned int)net.netmask);
+      if (len < 0 || static_cast<size_t>(len) >= to_size) return true;
       *to_length = len;
       return false;
     }
@@ -541,18 +533,16 @@ bool decode_inet(const unsigned char *buffer, size_t buffer_size, char *to, size
     char addr_str[32];
     format_ipv4_address(net.address, addr_str, sizeof(addr_str));
 
-    char result[64];
+    int len;
     if (net.netmask == IPV4_MAX_PREFIXLEN) {
       // Don't show /32 for host addresses
-      snprintf(result, sizeof(result), "%s", addr_str);
+      len = snprintf(to, to_size, "%s", addr_str);
     } else {
-      snprintf(result, sizeof(result), "%s/%u", addr_str,
-               (unsigned int)net.netmask);
+      len = snprintf(to, to_size, "%s/%u", addr_str,
+                     (unsigned int)net.netmask);
     }
 
-    size_t len = strlen(result);
-    if (len + 1 > to_size) return true;
-    strcpy(to, result);
+    if (len < 0 || static_cast<size_t>(len) >= to_size) return true;
     *to_length = len;
     return false;
 
@@ -566,18 +556,16 @@ bool decode_inet(const unsigned char *buffer, size_t buffer_size, char *to, size
       char addr_str[kMaxIPv6String];
       format_ipv6_address(net.address, addr_str, sizeof(addr_str));
 
-      char result[kMaxIPv6String];
+      int len;
       if (net.netmask == IPV6_MAX_PREFIXLEN) {
         // Don't show /128 for host addresses
-        snprintf(result, sizeof(result), "%s", addr_str);
+        len = snprintf(to, to_size, "%s", addr_str);
       } else {
-        snprintf(result, sizeof(result), "%s/%u", addr_str,
-                 (unsigned int)net.netmask);
+        len = snprintf(to, to_size, "%s/%u", addr_str,
+                       (unsigned int)net.netmask);
       }
 
-      size_t len = strlen(result);
-      if (len + 1 > to_size) return true;
-      strcpy(to, result);
+      if (len < 0 || static_cast<size_t>(len) >= to_size) return true;
       *to_length = len;
       return false;
     }
@@ -992,12 +980,8 @@ bool inet_text(const unsigned char *buffer, size_t buffer_size, char *result, si
     char addr_str[kMaxIPv4String];
     format_ipv4_address(net.address, addr_str, sizeof(addr_str));
 
-    char result_str[kMaxIPv4String];
-    snprintf(result_str, sizeof(result_str), "%s/%u", addr_str, net.netmask);
-
-    size_t len = strlen(result_str);
-    if (len + 1 > result_size) return true;
-    strcpy(result, result_str);
+    int len = snprintf(result, result_size, "%s/%u", addr_str, net.netmask);
+    if (len < 0 || static_cast<size_t>(len) >= result_size) return true;
     *result_length = len;
     return false;  // Success
 
@@ -1008,12 +992,8 @@ bool inet_text(const unsigned char *buffer, size_t buffer_size, char *result, si
     char addr_str[kMaxIPv6String];
     format_ipv6_address(net.address, addr_str, sizeof(addr_str));
 
-    char result_str[kMaxIPv6String];
-    snprintf(result_str, sizeof(result_str), "%s/%u", addr_str, net.netmask);
-
-    size_t len = strlen(result_str);
-    if (len + 1 > result_size) return true;
-    strcpy(result, result_str);
+    int len = snprintf(result, result_size, "%s/%u", addr_str, net.netmask);
+    if (len < 0 || static_cast<size_t>(len) >= result_size) return true;
     *result_length = len;
     return false;  // Success
   }
@@ -1528,11 +1508,8 @@ bool inet_abbrev(const unsigned char *buffer, size_t buffer_size, char *result, 
       strcpy(result, addr_str);
       *result_length = len;
     } else {
-      char result_str[kMaxIPv4String];
-      snprintf(result_str, sizeof(result_str), "%s/%u", addr_str, net.netmask);
-      size_t len = strlen(result_str);
-      if (len + 1 > result_size) return true;
-      strcpy(result, result_str);
+      int len = snprintf(result, result_size, "%s/%u", addr_str, net.netmask);
+      if (len < 0 || static_cast<size_t>(len) >= result_size) return true;
       *result_length = len;
     }
     return false;  // Success
@@ -1551,11 +1528,8 @@ bool inet_abbrev(const unsigned char *buffer, size_t buffer_size, char *result, 
       strcpy(result, addr_str);
       *result_length = len;
     } else {
-      char result_str[kMaxIPv6String];
-      snprintf(result_str, sizeof(result_str), "%s/%u", addr_str, net.netmask);
-      size_t len = strlen(result_str);
-      if (len + 1 > result_size) return true;
-      strcpy(result, result_str);
+      int len = snprintf(result, result_size, "%s/%u", addr_str, net.netmask);
+      if (len < 0 || static_cast<size_t>(len) >= result_size) return true;
       *result_length = len;
     }
     return false;  // Success
@@ -1600,11 +1574,8 @@ bool cidr_abbrev(const unsigned char *buffer, size_t buffer_size, char *result, 
       snprintf(addr_str, sizeof(addr_str), "%u.%u.%u.%u", octets[0], octets[1], octets[2], octets[3]);
     }
 
-    char result_str[kMaxIPv4String];
-    snprintf(result_str, sizeof(result_str), "%s/%u", addr_str, net.netmask);
-    size_t len = strlen(result_str);
-    if (len + 1 > result_size) return true;
-    strcpy(result, result_str);
+    int len = snprintf(result, result_size, "%s/%u", addr_str, net.netmask);
+    if (len < 0 || static_cast<size_t>(len) >= result_size) return true;
     *result_length = len;
     return false;  // Success
 
@@ -1617,11 +1588,8 @@ bool cidr_abbrev(const unsigned char *buffer, size_t buffer_size, char *result, 
     char addr_str[kMaxIPv6String];
     format_ipv6_address(net.address, addr_str, sizeof(addr_str));
 
-    char result_str[kMaxIPv6String];
-    snprintf(result_str, sizeof(result_str), "%s/%u", addr_str, net.netmask);
-    size_t len = strlen(result_str);
-    if (len + 1 > result_size) return true;
-    strcpy(result, result_str);
+    int len = snprintf(result, result_size, "%s/%u", addr_str, net.netmask);
+    if (len < 0 || static_cast<size_t>(len) >= result_size) return true;
     *result_length = len;
     return false;  // Success
   }

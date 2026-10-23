@@ -154,6 +154,13 @@ SELECT
     cidr_abbrev(cidr_from_string('10.0.0.0/8')) AS slash_8,
     cidr_abbrev(cidr_from_string('192.168.0.0/16')) AS slash_16;
 
+--echo # Test longest IPv4 text - 15-character address with a 2-digit mask
+SELECT
+    inet_text(inet_from_string('192.168.100.200/24')) AS inet_text_24,
+    inet_abbrev(inet_from_string('192.168.100.200/24')) AS inet_abbrev_24,
+    cidr_abbrev(cidr_from_string('192.168.100.200/32')) AS cidr_abbrev_32,
+    inet_to_string(inet_from_string('255.255.255.255/31')) AS inet_to_string_31;
+
 ########################################################################
 #
 # Test 6: Comparison helpers
