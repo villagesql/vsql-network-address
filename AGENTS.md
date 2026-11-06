@@ -17,7 +17,7 @@ This is a network address extension for VillageSQL (a MySQL-compatible database)
 The build process:
 1. Uses CMake with `FindVillageSQL.cmake` to locate the VillageSQL Extension SDK in the build tree
 2. Compiles C++ source files into shared library `network_address.so`
-3. Packages library with `manifest.json` into `vsql-network-address.veb` archive using `VEF_CREATE_VEB()`
+3. Packages library with `manifest.json` into `vsql_network_address.veb` archive using `VEF_CREATE_VEB()`
 
 **Requirements:**
 - VillageSQL build directory
@@ -90,7 +90,7 @@ Use this to test a specific VEB build without installing it first:
 
 ```bash
 cd /path/to/mysql-test
-VSQL_NETWORK_ADDRESS_VEB=/path/to/vsql-network-address/build/vsql-network-address.veb \
+VSQL_NETWORK_ADDRESS_VEB=/path/to/vsql-network-address/build/vsql_network_address.veb \
   perl mysql-test-run.pl --suite=/path/to/vsql-network-address/mysql-test
 ```
 
@@ -99,7 +99,7 @@ All test files include this setup at the beginning to support both testing metho
 
 ```sql
 # Setup: Copy VEB to veb_dir if VSQL_NETWORK_ADDRESS_VEB is set, then install extension
---let $veb_dest = `SELECT CONCAT(@@veb_dir, '/vsql-network-address.veb')`
+--let $veb_dest = `SELECT CONCAT(@@veb_dir, '/vsql_network_address.veb')`
 if ($VSQL_NETWORK_ADDRESS_VEB) {
   --error 0,1
   --remove_file $veb_dest

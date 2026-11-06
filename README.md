@@ -58,7 +58,7 @@ work on the extension itself.
    make -j $(getconf _NPROCESSORS_ONLN)
    ```
 
-   This will create the `vsql-network-address.veb` package in the build directory and automatically configure the VEB install directory to point to VillageSQL's `veb_output_directory`.
+   This will create the `vsql_network_address.veb` package in the build directory and automatically configure the VEB install directory to point to VillageSQL's `veb_output_directory`.
 
 3. Install the VEB package to your VillageSQL instance:
    ```bash
@@ -358,14 +358,14 @@ Use this to test a specific VEB build without installing it first:
 **Linux:**
 ```bash
 cd $HOME/build/villagesql/mysql-test
-VSQL_NETWORK_ADDRESS_VEB=/path/to/vsql-network-address/build/vsql-network-address.veb \
+VSQL_NETWORK_ADDRESS_VEB=/path/to/vsql-network-address/build/vsql_network_address.veb \
   perl mysql-test-run.pl --suite=/path/to/vsql-network-address/mysql-test
 ```
 
 **macOS:**
 ```bash
 cd ~/build/villagesql/mysql-test
-VSQL_NETWORK_ADDRESS_VEB=/path/to/vsql-network-address/build/vsql-network-address.veb \
+VSQL_NETWORK_ADDRESS_VEB=/path/to/vsql-network-address/build/vsql_network_address.veb \
   perl mysql-test-run.pl --suite=/path/to/vsql-network-address/mysql-test
 ```
 
@@ -395,7 +395,7 @@ vsql-network-address/
 ```
 
 ### Build Targets
-- `make` - Build the extension and create the `vsql-network-address.veb` package
+- `make` - Build the extension and create the `vsql_network_address.veb` package
 - `make install` - Install the VEB package to the specified directory
 
 ## Reporting Bugs and Requesting Features
