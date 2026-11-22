@@ -136,40 +136,48 @@ id	name	network
 2	Server 2	10.0.0.0/8
 3	Server 3	172.16.0.0/16
 1	Server 1	192.168.2.0/24
-10	IPv6 Server 1	2001:0db8:0000:0000
-12	IPv6 Server 3	2001:0db8:85a3:0000
+10	IPv6 Server 1	2001:0db8:0000:0000:0000:0000:0000:0000/32
+12	IPv6 Server 3	2001:0db8:85a3:0000:0000:0000:0000:0000/48
 4	Server 4	203.0.113.0/24
-11	IPv6 Server 2	fe80:0000:0000:0000
+11	IPv6 Server 2	fe80:0000:0000:0000:0000:0000:0000:0000/64
 # Sort by host address
 SELECT id, name, inet_to_string(host_addr) AS host_addr FROM test_network_crud ORDER BY host_addr;
 id	name	host_addr
 2	Server 2	10.1.1.50
 3	Server 3	172.16.5.25
 1	Server 1	192.168.2.200
-10	IPv6 Server 1	2001:0db8:0000:0000
-12	IPv6 Server 3	2001:0db8:85a3:0000
+10	IPv6 Server 1	2001:0db8:0000:0000:0000:0000:0000:0001
+12	IPv6 Server 3	2001:0db8:85a3:0000:0000:8a2e:0370:7334/64
 4	Server 4	203.0.113.10
-11	IPv6 Server 2	fe80:0000:0000:0000
+11	IPv6 Server 2	fe80:0000:0000:0000:0000:0000:0000:0001
 # Sort by MAC address
 SELECT id, name, macaddr_to_string(server_mac) AS server_mac FROM test_network_crud ORDER BY server_mac;
 id	name	server_mac
-4	Server 4	00:00:
-2	Server 2	00:1b:
-11	IPv6 Server 2	00:1b:
-10	IPv6 Server 1	08:00:
-3	Server 3	aa:bb:
-12	IPv6 Server 3	aa:bb:
-1	Server 1	ff:ff:
+4	Server 4	00:00:00:00:00:00
+2	Server 2	00:1b:44:11:3a:b7
+11	IPv6 Server 2	00:1b:44:11:3a:b7
+10	IPv6 Server 1	08:00:2b:01:02:03
+3	Server 3	aa:bb:cc:dd:ee:ff
+12	IPv6 Server 3	aa:bb:cc:dd:ee:ff
+1	Server 1	ff:ff:ff:ff:ff:ff
 # Sort by MACADDR8
 SELECT id, name, macaddr8_to_string(switch_mac) AS switch_mac FROM test_network_crud ORDER BY switch_mac;
 id	name	switch_mac
-4	Server 4	00:00:00
-2	Server 2	00:1b:44
-11	IPv6 Server 2	00:1b:44
-10	IPv6 Server 1	08:00:2b
-3	Server 3	aa:bb:cc
-12	IPv6 Server 3	aa:bb:cc
-1	Server 1	ff:ff:ff
+4	Server 4	00:00:00:00:00:00:00:00
+2	Server 2	00:1b:44:11:3a:b7:c8:d9
+11	IPv6 Server 2	00:1b:44:11:3a:b7:c8:d9
+10	IPv6 Server 1	08:00:2b:01:02:03:04:05
+3	Server 3	aa:bb:cc:dd:ee:ff:11:22
+12	IPv6 Server 3	aa:bb:cc:dd:ee:ff:11:22
+1	Server 1	ff:ff:ff:ff:ff:ff:ff:ff
+# Text results keep their full length in a temporary table
+SELECT DISTINCT cidr_to_string(network) AS network, inet_to_string(host_addr) AS host_addr,
+macaddr_to_string(server_mac) AS server_mac, macaddr8_to_string(switch_mac) AS switch_mac,
+inet_host(host_addr) AS host, inet_text(host_addr) AS text,
+inet_abbrev(host_addr) AS inet_abbrev, cidr_abbrev(network) AS cidr_abbrev
+FROM test_network_crud WHERE name = 'IPv6 Server 3';
+network	host_addr	server_mac	switch_mac	host	text	inet_abbrev	cidr_abbrev
+2001:0db8:85a3:0000:0000:0000:0000:0000/48	2001:0db8:85a3:0000:0000:8a2e:0370:7334/64	aa:bb:cc:dd:ee:ff	aa:bb:cc:dd:ee:ff:11:22	2001:0db8:85a3:0000:0000:8a2e:0370:7334	2001:0db8:85a3:0000:0000:8a2e:0370:7334/64	2001:0db8:85a3:0000:0000:8a2e:0370:7334/64	2001:0db8:85a3:0000:0000:0000:0000:0000/48
 # Insert record with NULL optional fields
 INSERT INTO test_network_crud (id, name, network, host_addr) VALUES
 (5, 'Server 5', NULL, '1.2.3.4');

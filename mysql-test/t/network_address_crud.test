@@ -162,6 +162,13 @@ SELECT id, name, macaddr_to_string(server_mac) AS server_mac FROM test_network_c
 --echo # Sort by MACADDR8
 SELECT id, name, macaddr8_to_string(switch_mac) AS switch_mac FROM test_network_crud ORDER BY switch_mac;
 
+--echo # Text results keep their full length in a temporary table
+SELECT DISTINCT cidr_to_string(network) AS network, inet_to_string(host_addr) AS host_addr,
+  macaddr_to_string(server_mac) AS server_mac, macaddr8_to_string(switch_mac) AS switch_mac,
+  inet_host(host_addr) AS host, inet_text(host_addr) AS text,
+  inet_abbrev(host_addr) AS inet_abbrev, cidr_abbrev(network) AS cidr_abbrev
+FROM test_network_crud WHERE name = 'IPv6 Server 3';
+
 ########################################################################
 #
 # Test 6: NULL handling
